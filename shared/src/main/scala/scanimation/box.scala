@@ -89,13 +89,21 @@ object box {
   def textButton(implicit context: BoxContext, assignedStyler: Styler): TextButtonBox = this.textButton()
 
   /** Creates an hbox button with icon on the left and text on the right */
-  def iconTextButton(icon: IconValue, text: String, id: BoxId = BoxId())(implicit context: BoxContext, assignedStyler: Styler): ContainerButtonBox = {
-    button(id).sub(
-      hbox().sub(
-        this.icon().mutate(_.iconValue(icon)),
-        this.text().mutate(_.textValue(text))
-      )
-    )
+  def iconTextButton(iconValue: IconValue, textValue: String, id: BoxId = BoxId())(implicit context: BoxContext, assignedStyler: Styler): IconTextButtonBox = {
+    val assignedId = id
+    val textDelegate = text().as(textValue)
+    val iconDelegate = icon().as(iconValue)
+    val button = new IconTextButtonBox {
+      override val text: TextBox = textDelegate
+      override val icon: IconBox = iconDelegate
+
+      override val background: DrawComponent = context.drawComponent
+
+      override def id: BoxId = assignedId
+
+      override def styler: Styler = assignedStyler
+    }.bindAndRegister()
+    button.sub(hbox.sub(iconDelegate, textDelegate))
   }
 
   /** Creates an hbox button with image on the left and text on the right */
@@ -235,6 +243,9 @@ object box {
 
   /** Selector for custom buttons */
   val isButton: Selector[ContainerButtonBox] = isA[ContainerButtonBox]
+
+  /** Selector for grid boxes */
+  val isGrid: Selector[GridBox] = isA[GridBox]
 
   /** Selector for horizontal boxes */
   val isHBox: Selector[HBox] = isA[HBox]
@@ -396,6 +407,18 @@ object box {
     /** Sets the alignment of the box */
     def align(alignment: Vec2d): this.type = {
       boxLayout.align.write(alignment)
+      this
+    }
+
+    /** Enables the box interactions */
+    def enable: this.type = {
+      boxLayout.relEnabled.write(true)
+      this
+    }
+
+    /** Disables the box interactions */
+    def disable: this.type = {
+      boxLayout.relEnabled.write(false)
       this
     }
 
@@ -950,6 +973,15 @@ object box {
 
   /** Interactive button box with custom content */
   trait ContainerButtonBox extends RegionBox with Interactive with RegionStyle with ButtonStyle {
+  }
+
+  /** Interactive button with icon and label */
+  trait IconTextButtonBox extends ContainerButtonBox {
+    val text: TextBox
+    val icon: IconBox
+
+    /** Sets the text value of the button */
+    def as(value: String): IconTextButtonBox = this.mutate(_.text.as(value))
   }
 
   /** Represents a style for container that puts children in a grid */

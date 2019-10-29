@@ -1,5 +1,7 @@
 package scanimation
 
+import org.scalajs.dom
+import scanimation.common.Transition.{Loaded, Missing}
 import scanimation.common._
 import scanimation.conf.ScanimationConfig
 import scanimation.model.Note
@@ -44,23 +46,92 @@ object mvc {
     def showPage(page: Page): Unit = {
       model.page.write(page)
     }
+
+    /** Opens up files upload dialogue to add frame images */
+    def addFrames(): Unit = {
+      log.info("adding frames")
+      val frame1 = Loaded(0, 0, Frame("frame1.png", 1920 xy 1080, "foo"))
+      val frame2 = Loaded(0, 0, Frame("frame2.png", 1920 xy 1080, "bar"))
+      model.frames.write(frame1 :: frame2 :: Nil)
+    }
+
+    /** Removes all of the frames from frames list */
+    def clearFrames(): Unit = {
+      log.info("clearing frames")
+      model.frames.write(Nil)
+      model.scanimation.reset
+    }
+
+    /** Displays the input animation in the preview */
+    def showAnimation(): Unit = {
+      log.info("showing animation")
+    }
+
+    /** Replaces all modified settings with recommended values */
+    def resetSettings(): Unit = {
+      log.info("resetting settings to default")
+    }
+
+    /** Requests the server to produce the scanimation */
+    def computeScanimation(): Unit = {
+      log.info("computing scanimation")
+      model.scanimation.loading
+      dom.window.setTimeout({ () =>
+        model.scanimation.loaded(CompleteScanimation("foo", "bar"))
+      }, 5000)
+    }
+
+    /** Plays the computed scanimation in preview section */
+    def showScanimation(): Unit = {
+      log.info("showing scanimation")
+    }
+
+    /** Downloads the produced scanimation image */
+    def exportScanimation(): Unit = {
+      log.info("exporting scanimation")
+    }
+
+    /** Downloads the produced scanimation grid image */
+    def exportGrid(): Unit = {
+      log.info("exporting scanimation grid")
+    }
   }
 
   /** Defines model with common fields
     *
-    * @param tick         the current update tick
-    * @param frame        the current rendering frame
-    * @param screen       the current screen size
-    * @param scale        the current screen scale
-    * @param mouse        current mouse coordinates
-    * @param page         currently displayed scanimation page
+    * @param tick        the current update tick
+    * @param frame       the current rendering frame
+    * @param screen      the current screen size
+    * @param scale       the current screen scale
+    * @param mouse       current mouse coordinates
+    * @param page        currently displayed scanimation page
+    * @param frames      a list of frame images uploaded by the user
+    * @param scanimation the scanimation computing results
     */
   case class Model(tick: Writeable[Long] = Data(0),
                    frame: Writeable[Long] = Data(0),
                    screen: Writeable[Vec2i] = Data(0 xy 0),
                    scale: Writeable[Double] = Data(1.0),
                    mouse: Writeable[Vec2d] = Data(Vec2d.Zero),
-                   page: Writeable[Page] = LazyData(router.parsePage))
+                   page: Writeable[Page] = LazyData(router.parsePage),
+
+                   frames: Writeable[List[Transition[Frame]]] = Data(Nil),
+                   scanimation: TransitionData[CompleteScanimation] = Data(Missing()))
+
+  /** Defines the single animation frame
+    *
+    * @param name the name of the uploaded file
+    * @param size the size of the uploaded image
+    * @param url  the url of the frame image uploaded on the server
+    */
+  case class Frame(name: String, size: Vec2i, url: String)
+
+  /** Contains scanimation processing results
+    *
+    * @param scanimation the image url of combined animation frames
+    * @param grid        the image url of the scanimation grid with transparent background
+    */
+  case class CompleteScanimation(scanimation: String, grid: String)
 
   /** The current application page */
   sealed trait Page {

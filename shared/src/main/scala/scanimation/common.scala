@@ -752,6 +752,7 @@ object common {
     val Blue700: Color = hex("#1976d2")
     val Red500: Color = hex("#f44336")
     val Grey300: Color = hex("#e0e0e0")
+    val Grey600: Color = hex("#757575")
   }
 
   implicit class ColorOps(val color: Color) extends AnyVal {
@@ -774,6 +775,9 @@ object common {
     /** Returns true if the value is being loaded */
     def isTransitioning: Boolean = false
   }
+
+  /** Convenient type for writeable transitions */
+  type TransitionData[A] = Writeable[Transition[A]]
 
   object Transition {
 
@@ -801,9 +805,9 @@ object common {
 
   }
 
-  implicit class TransitionWritableOps[A](val transition: Writeable[Transition[A]]) extends AnyVal {
+  implicit class TransitionWritableOps[A](val transition: TransitionData[A]) extends AnyVal {
     /** Puts transition into loading state */
-    def loading: Writeable[Transition[A]] = {
+    def loading: TransitionData[A] = {
       transition() match {
         case Missing() =>
           transition.write(Loading(currentTimeMillis))
@@ -818,7 +822,7 @@ object common {
     }
 
     /** Puts transition into loaded state */
-    def loaded(value: A): Writeable[Transition[A]] = {
+    def loaded(value: A): TransitionData[A] = {
       transition() match {
         case Missing() =>
           transition.write(Loaded(currentTimeMillis, currentTimeMillis, value))
@@ -833,7 +837,7 @@ object common {
     }
 
     /** Puts transition into failed state */
-    def failed(reason: String): Writeable[Transition[A]] = {
+    def failed(reason: String): TransitionData[A] = {
       transition() match {
         case Missing() =>
           transition.write(Failed(currentTimeMillis, currentTimeMillis, reason))
@@ -848,13 +852,13 @@ object common {
     }
 
     /** Resets the transition to missing state */
-    def reset: Writeable[Transition[A]] = {
+    def reset: TransitionData[A] = {
       transition.write(Missing())
       transition
     }
 
     /** Executes the code when transition is loading */
-    def whenLoading(code: => Unit): Writeable[Transition[A]] = {
+    def whenLoading(code: => Unit): TransitionData[A] = {
       transition /> {
         case Loading(start) => code
       }
@@ -862,7 +866,7 @@ object common {
     }
 
     /** Executes the code when transition was successfully loaded */
-    def whenLoaded(code: A => Unit): Writeable[Transition[A]] = {
+    def whenLoaded(code: A => Unit): TransitionData[A] = {
       transition /> {
         case Loaded(start, end, value) => code.apply(value)
       }
@@ -870,7 +874,7 @@ object common {
     }
 
     /** Executes the code when transition fails to load */
-    def whenFailed(code: String => Unit): Writeable[Transition[A]] = {
+    def whenFailed(code: String => Unit): TransitionData[A] = {
       transition /> {
         case Failed(start, end, reason) => code.apply(reason)
       }

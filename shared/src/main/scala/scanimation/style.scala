@@ -10,6 +10,7 @@ object style {
   val primaryColor = Colors.Blue700
   val errorColor = Colors.Red500
   val highlightColor = Colors.Grey300
+  val disabledColor = Colors.Grey600
   val whiteColor = Colors.PureWhite
   val blackColor = Colors.PureBlack
 
