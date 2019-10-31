@@ -308,6 +308,39 @@ object box {
     /** Replaces current children with a given list of children */
     def subs(children: List[Box]): this.type = sub(children: _*)
 
+    /** Binds the list data to this box */
+    def bindList[A](data: ListData[A], createCode: ListDataElementView[A] => Box, selectCode: (Box, Boolean) => Unit)(implicit context: BoxContext): this.type = {
+      var map: Map[ListElementId, BoxId] = Map.empty
+      data.onAdd { case (id, a) =>
+        val view = ListDataElementView(id, data)
+        val box = createCode.apply(view)
+        map = map + (id -> box.id)
+        this.subs(children :+ box)
+      }
+      data.onRemove { case (id, a) =>
+        map.get(id)
+          .flatMap(boxId => children.find(box => box.id == boxId))
+          .foreach { box =>
+            this.subs(children.without(box))
+            context.unregister(box)
+            map = map - id
+          }
+      }
+      data.onOrder { case order =>
+        this.subs(order.flatMap(id => map.get(id)).flatMap(boxId => children.find(box => box.id == boxId)))
+      }
+      data.onSelect { case selection =>
+        val boxIds = selection.flatMap(id => map.get(id))
+        children.foreach { child =>
+          selectCode.apply(child, boxIds.contains(child.id))
+        }
+      }
+      this
+    }
+
+    /** Returns a list of current relative children */
+    def children: List[Box] = boxLayout.relChildren()
+
     /** Refreshed the style of this box */
     def refreshStyle(): Unit = styler.apply(this)
 
@@ -1041,11 +1074,12 @@ object box {
 
     override def calculateLayoutY(): Unit = {
       val rowBoxes = childrenRows
+      val filteredRow = rowBoxes.filter(row => row.exists(box => box.layout.absDisplay()))
       val sizes = Stretcher.stretch[List[Box]](
-        list = rowBoxes,
-        fillCode = row => row.map(b => b.layout.fill().y).maxOr(0.0),
-        minCode = row => row.map(b => b.layout.minH()).maxOr(0.0),
-        layout.relAreaY().y - ((rowBoxes.size - 1) max 0) * spacing().y - pad().y * 2
+        list = filteredRow,
+        fillCode = row => row.filter(box => box.layout.absDisplay()).map(b => b.layout.fill().y).maxOr(0.0),
+        minCode = row => row.filter(box => box.layout.absDisplay()).map(b => b.layout.minH()).maxOr(0.0),
+        layout.relAreaY().y - ((filteredRow.size - 1) max 0) * spacing().y - pad().y * 2
       )
       sizes.foldLeft(pad().y) { case (offset, (row, size)) =>
         row.foreach(c => c.updateAreaY(offset + childOffset().y, size))

@@ -341,6 +341,182 @@ object common {
     def apply[A](default: A): Writeable[A] = new Implementation(default, skipDuplicates = true)
   }
 
+  /** Defines the identifier of list elements */
+  type ListElementId = String
+
+  /** Wraps a mutable lists for subscriptions */
+  class ListData[A] {
+    /** Internal value map */
+    private var map: Map[ListElementId, A] = Map.empty
+    /** Internal index list */
+    private var list: List[ListElementId] = Nil
+    /** Internal selection set */
+    private var selection: Set[ListElementId] = Set.empty
+
+    /** Data representation of underlying list */
+    val data: Writeable[List[A]] = LazyData(Nil)
+
+    /** Handlers for change events */
+    private var changeListeners: List[EndListener[List[A]]] = Nil
+    /** Handlers for add events */
+    private var addListeners: List[EndListener[(ListElementId, A)]] = Nil
+    /** Handlers for remove events */
+    private var removeListeners: List[EndListener[(ListElementId, A)]] = Nil
+    /** Handlers for order events */
+    private var orderListeners: List[EndListener[List[ListElementId]]] = Nil
+    /** Handlers for select events */
+    private var selectionListeners: List[EndListener[Set[ListElementId]]] = Nil
+
+    /** Reads the list data for the given element */
+    def read(id: ListElementId): Option[A] = map.get(id)
+
+    /** Adds a list element at the end */
+    def add(value: A): ListElementId = this.synchronized {
+      val id = uuid
+      map = map + (id -> value)
+      list = list :+ id
+      addListeners.foreach(l => l.lift.apply(id, value))
+      notifyChanged()
+      id
+    }
+
+    /** Appends a list of elements at the end */
+    def addList(values: List[A]): List[ListElementId] = this.synchronized {
+      values.map(v => add(v))
+    }
+
+    /** Removes the list element with given id */
+    def remove(id: ListElementId): Unit = this.synchronized {
+      map.get(id).foreach { a =>
+        removeFromSelection(id)
+        map = map - id
+        list = list.without(id)
+        removeListeners.foreach(l => l.lift.apply(id, a))
+        notifyChanged()
+      }
+    }
+
+    /** Empties the list data */
+    def clear(): Unit = this.synchronized {
+      if (list.nonEmpty) {
+        deselectAll()
+        val prev = map
+        map = Map.empty
+        list = Nil
+        prev.foreach { case (id, a) => removeListeners.foreach(l => l.lift.apply(id, a)) }
+        notifyChanged()
+      }
+    }
+
+    /** Shifts given element up on the list */
+    def moveUp(id: ListElementId): Unit = this.synchronized {
+      list.indexOf(id) match {
+        case -1 => // ignore
+        case 0 => // ignore
+        case index =>
+          list = list.take(index - 1) ++ list.lift(index) ++ list.lift(index - 1) ++ list.drop(index + 1)
+          orderListeners.foreach(l => l.lift.apply(list))
+          notifyChanged()
+      }
+    }
+
+    /** Shifts given element down on the list */
+    def moveDown(id: ListElementId): Unit = this.synchronized {
+      list.indexOf(id) match {
+        case -1 => // ignore
+        case last if last == list.size - 1 => // ignore
+        case index =>
+          list = list.take(index) ++ list.lift(index + 1) ++ list.lift(index) ++ list.drop(index + 2)
+          orderListeners.foreach(l => l.lift.apply(list))
+          notifyChanged()
+      }
+    }
+
+    /** Sets the selection to a given element */
+    def select(id: ListElementId): Unit = this.synchronized {
+      if (selection != Set(id)) {
+        deselectAll()
+        addToSelection(id)
+      }
+    }
+
+    /** Appends the given element to selection */
+    def addToSelection(id: ListElementId): Unit = this.synchronized {
+      if (!selection.contains(id)) {
+        selection = selection + id
+        selectionListeners.foreach(l => l.lift.apply(selection))
+      }
+    }
+
+    /** Removes the given element from selection */
+    def removeFromSelection(id: ListElementId): Unit = this.synchronized {
+      if (selection.contains(id)) {
+        selection = selection - id
+        selectionListeners.foreach(l => l.lift.apply(selection))
+      }
+    }
+
+    /** Clears the selection */
+    def deselectAll(): Unit = this.synchronized {
+      if (selection.nonEmpty) {
+        selection = Set.empty
+        selectionListeners.foreach(l => l.lift.apply(selection))
+      }
+    }
+
+    /** Notifies about any list changes */
+    private def notifyChanged(): Unit = {
+      data.write(list.map(id => map(id)))
+    }
+
+    /** Starts listening to element addition events */
+    def onAdd(listener: EndListener[(ListElementId, A)]): this.type = this.synchronized {
+      addListeners = addListeners :+ listener
+      this
+    }
+
+    /** Starts listening to element removal events */
+    def onRemove(listener: EndListener[(ListElementId, A)]): this.type = this.synchronized {
+      removeListeners = removeListeners :+ listener
+      this
+    }
+
+    /** Starts listening to element reordering events */
+    def onOrder(listener: EndListener[List[ListElementId]]): this.type = this.synchronized {
+      orderListeners = orderListeners :+ listener
+      this
+    }
+
+    /** Starts listening to element selection events */
+    def onSelect(listener: EndListener[Set[ListElementId]]): this.type = this.synchronized {
+      selectionListeners = selectionListeners :+ listener
+      this
+    }
+  }
+
+  object ListData {
+    /** Creates an empty list data */
+    def apply[A](): ListData[A] = new ListData[A]()
+  }
+
+  /** The view of single list data element */
+  case class ListDataElementView[A](id: ListElementId, data: ListData[A]) {
+    /** Returns the value of data element */
+    def read(): A = data.read(id).get
+
+    /** Removes itself from the list */
+    def remove(): Unit = data.remove(id)
+
+    /** Moves itself up in the list */
+    def moveUp(): Unit = data.moveUp(id)
+
+    /** Moves itself down in the list */
+    def moveDown(): Unit = data.moveDown(id)
+
+    /** Deselects all other elements and selects itself */
+    def select(): Unit = data.select(id)
+  }
+
   implicit class DataOptionOps[A](val data: Writeable[Option[A]]) extends AnyVal {
     /** Sets optional value to Some given value */
     def writeSome(a: A): Unit = data.write(Some(a))
