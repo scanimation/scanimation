@@ -69,6 +69,9 @@ object box {
     }.bindAndRegister()
   }
 
+  /** Creates an instance of button box with custom content */
+  def button(implicit context: BoxContext, assignedStyler: Styler): ContainerButtonBox = this.button()
+
   /** Creates an instance of button box with text label */
   def textButton(id: BoxId = BoxId())(implicit context: BoxContext, assignedStyler: Styler): TextButtonBox = {
     val assignedId = id
@@ -419,6 +422,18 @@ object box {
     /** Disables the box interactions */
     def disable: this.type = {
       boxLayout.relEnabled.write(false)
+      this
+    }
+
+    /** Sets the element display to false */
+    def hideDisplay: this.type = {
+      boxLayout.relDisplay.write(false)
+      this
+    }
+
+    /** Sets the element display to true */
+    def showDisplay: this.type = {
+      boxLayout.relDisplay.write(true)
       this
     }
 
@@ -813,6 +828,9 @@ object box {
     /** Registers the drawing canvas on the page */
     def registerCanvas(box: DrawingBox, canvas: Any): Unit
 
+    /** Removes the box from the context, use this to cleanup unwanted boxes */
+    def unregister(box: Box): Unit
+
     /** Returns the very root box that matches screen size */
     def root: Box
   }
@@ -1008,11 +1026,12 @@ object box {
 
     override def calculateLayoutX(): Unit = {
       val columnBoxes = childrenColumns
+      val filteredColumn = columnBoxes.filter(column => column.exists(box => box.layout.absDisplay()))
       val sizes = Stretcher.stretch[List[Box]](
-        list = columnBoxes,
-        fillCode = col => col.map(b => b.layout.fill().x).maxOr(0.0),
-        minCode = col => col.map(b => b.layout.minW()).maxOr(0.0),
-        layout.relAreaX().y - ((columnBoxes.size - 1) max 0) * spacing().x - pad().x * 2
+        list = filteredColumn,
+        fillCode = col => col.filter(box => box.layout.absDisplay()).map(b => b.layout.fill().x).maxOr(0.0),
+        minCode = col => col.filter(box => box.layout.absDisplay()).map(b => b.layout.minW()).maxOr(0.0),
+        layout.relAreaX().y - ((filteredColumn.size - 1) max 0) * spacing().x - pad().x * 2
       )
       sizes.foldLeft(pad().x) { case (offset, (column, size)) =>
         column.foreach(c => c.updateAreaX(offset + childOffset().x, size))

@@ -18,6 +18,8 @@ class StretcherSpec extends Spec {
 
     override def registerCanvas(box: DrawingBox, canvas: Any): Unit = {}
 
+    override def unregister(box: Box): Unit = {}
+
     override def root: Box = ???
   }
 

@@ -749,6 +749,7 @@ object common {
     val PureBlack: Color = hex("#000000")
     val PureWhite: Color = hex("#ffffff")
     /** Material design colors */
+    val Blue100: Color = hex("#bbdefb")
     val Blue700: Color = hex("#1976d2")
     val Red500: Color = hex("#f44336")
     val Grey300: Color = hex("#e0e0e0")
@@ -774,6 +775,9 @@ object common {
 
     /** Returns true if the value is being loaded */
     def isTransitioning: Boolean = false
+
+    /** Returns true if transition has failed to happen */
+    def hasFailed: Boolean = false
   }
 
   /** Convenient type for writeable transitions */
@@ -801,6 +805,8 @@ object common {
     /** Describes value that failed to load */
     case class Failed[A](start: Long, end: Long, reason: String) extends Transition[A] {
       override def valueOpt: Option[A] = None
+
+      override def hasFailed: Boolean = true
     }
 
   }

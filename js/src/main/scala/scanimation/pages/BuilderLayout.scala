@@ -22,6 +22,12 @@ object BuilderLayout extends JqBoxLayout[BuilderPage] with Logging {
   val sectionContentClass = BoxClass()
   val framesOrZoneId = BoxId()
   val dropZoneId = BoxId()
+  val frameListId = BoxId()
+  val frameErrorClass = BoxClass()
+  val frameRowClass = BoxClass()
+  val frameControlClass = BoxClass()
+  val frameSelectedClass = BoxClass()
+  val frameWrapClass = BoxClass()
   val previewId = BoxId()
   val builderButtonClass = BoxClass()
   val framesControlsBoxId = BoxId()
@@ -74,9 +80,49 @@ object BuilderLayout extends JqBoxLayout[BuilderPage] with Logging {
           _.textSize(24)
           )
       ),
+      under(frameListId).sub(
+        isVBox |> (
+          _.spacingY(0)
+          ),
+        under(frameRowClass).sub(
+          isButton |> (
+            _.fixedH(32),
+            _.cursor(Cursors.Auto)
+          ),
+          isButton && frameSelectedClass |> (
+            _.fillColor(greyHighlightColor)
+          ),
+          isButton && Hover |> (
+            _.fillColor(greyHighlightColor),
+            _.cursor(Cursors.Pointer)
+          ),
+          isRegion && frameSelectedClass |> (
+            _.fillColor(greyHighlightColor)
+            ),
+          frameWrapClass |> (
+            _.fixedW(32)
+            ),
+          isIcon |> (
+            _.iconSize(16),
+            _.iconColor(blackColor),
+          ),
+          isIcon && frameErrorClass |> (
+            _.iconColor(errorColor)
+            ),
+          isText |> (
+            _.textSize(16),
+            ),
+          isButton && frameControlClass |> (
+            _.fillColor(greyHighlightColor)
+            ),
+          isButton && frameControlClass && Hover |> (
+            _.fillColor(primaryHighlightColor)
+            )
+        )
+      ),
       isRegion && previewId |> (
         _.borderWidth(1),
-        _.fillColor(highlightColor)
+        _.fillColor(greyHighlightColor)
       ),
       under(builderButtonClass).sub(
         isButton |> (
@@ -100,14 +146,14 @@ object BuilderLayout extends JqBoxLayout[BuilderPage] with Logging {
           _.iconSize(20),
         ),
         isIcon && Disabled |> (
-          _.iconColor(highlightColor),
+          _.iconColor(greyHighlightColor),
           ),
         isText |> (
           _.textColor(whiteColor),
           _.textSize(16),
         ),
         isText && Disabled |> (
-          _.textColor(highlightColor),
+          _.textColor(greyHighlightColor),
           ),
       ),
       isHBox && framesControlsBoxId |> (
@@ -120,7 +166,7 @@ object BuilderLayout extends JqBoxLayout[BuilderPage] with Logging {
         isRegion && settingsInputClass |> (
           _.fixedW(64),
           _.fixedH(22),
-          _.fillColor(highlightColor),
+          _.fillColor(greyHighlightColor),
           _.borderWidth(1),
         ),
         isGrid |> (
@@ -156,7 +202,65 @@ object BuilderLayout extends JqBoxLayout[BuilderPage] with Logging {
     val dropZone = container(dropZoneId).fillBoth.sub(
       text.as("Drop images here...")
     )
-    val frameList = container.fillBoth.mutate(_.layout.relVisible.write(false))
+    val frameList = vbox(frameListId).fillX.align(Vec2d.Top).mutate { list =>
+      controller.model.frames /> {
+        case Nil =>
+          list.hideDisplay
+          dropZone.showDisplay
+        case frames =>
+          list.showDisplay
+          dropZone.hideDisplay
+          val previousList = list.layout.relChildren()
+          val nextList = frames.zipWithIndex.map { case (frame, index) =>
+            val iconValue = frame match {
+              case Missing() =>
+                MaterialDesign.HourglassEmpty
+              case Loading(start) =>
+                MaterialDesign.HourglassFull
+              case Loaded(start, end, value) =>
+                MaterialDesign.CheckCircle
+              case Failed(start, end, reason) =>
+                MaterialDesign.Error
+            }
+            val frameName = frame match {
+              case Loaded(start, end, value) => value.name
+              case _ => "N/A"
+            }
+            val controls = hbox.sub(
+              button.addClass(frameControlClass).addClass(frameWrapClass)
+                .sub(icon.as(MaterialDesign.ArrowUpward))
+                .onClick(controller.moveFrameUp(index)),
+              button.addClass(frameControlClass).addClass(frameWrapClass)
+                .sub(icon.as(MaterialDesign.ArrowDownward))
+                .onClick(controller.moveFrameDown(index)),
+              button.addClass(frameControlClass).addClass(frameWrapClass)
+                .sub(icon.as(MaterialDesign.Close))
+                .onClick(controller.deleteFrame(index)),
+            )
+            val frameButton = button.fillX.sub(
+              hbox.fillX.sub(
+                container.addClass(frameWrapClass).sub(icon.as(iconValue).updateClass(frameErrorClass, frame.hasFailed)),
+                text.as(frameName).fillX,
+              )
+            ).onClick(controller.selectFrame(index))
+            val frameRowContent = hbox.fillX
+            region.addClass(frameRowClass).fillX.sub(frameRowContent).mutate { row =>
+              controller.model.selectedFrame /> {
+                case Some(i) if i == index =>
+                  row.addClass(frameSelectedClass)
+                  frameButton.addClass(frameSelectedClass)
+                  frameRowContent.sub(frameButton, controls)
+                case _ =>
+                  row.removeClass(frameSelectedClass)
+                  frameButton.removeClass(frameSelectedClass)
+                  frameRowContent.sub(frameButton).calculateLayoutX()
+              }
+            }
+          }
+          list.subs(nextList)
+          previousList.foreach(b => context.unregister(b))
+      }
+    }
     val framesOrZone = region(framesOrZoneId).fillBoth.sub(
       dropZone,
       frameList

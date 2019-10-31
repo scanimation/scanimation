@@ -39,6 +39,9 @@ object mvc {
       model.page /> {
         case page => http.updateTitle(s"Scanimation - ${page.title}")
       }
+      model.frames /> {
+        case Nil => model.selectedFrame.write(None)
+      }
       log.info("bound")
     }
 
@@ -50,9 +53,10 @@ object mvc {
     /** Opens up files upload dialogue to add frame images */
     def addFrames(): Unit = {
       log.info("adding frames")
-      val frame1 = Loaded(0, 0, Frame("frame1.png", 1920 xy 1080, "foo"))
-      val frame2 = Loaded(0, 0, Frame("frame2.png", 1920 xy 1080, "bar"))
-      model.frames.write(frame1 :: frame2 :: Nil)
+      val frames = (0 until 6).toList.map { index =>
+        Loaded(0, 0, Frame(s"frame${index + 1}.png", 1920 xy 1080, s"foo$index"))
+      }
+      model.frames.write(frames)
     }
 
     /** Removes all of the frames from frames list */
@@ -65,6 +69,36 @@ object mvc {
     /** Displays the input animation in the preview */
     def showAnimation(): Unit = {
       log.info("showing animation")
+    }
+
+    /** Marks the frame with given index for the preview */
+    def selectFrame(index: Int): Unit = {
+      log.info(s"selecting frame [$index]")
+      model.selectedFrame.write(Some(index))
+    }
+
+    /** Attempts to move the frame with given index up */
+    def moveFrameUp(index: Int): Unit = {
+      log.info(s"moving frame [$index] up")
+      val current = model.frames()
+      model.frames.write(current.take(index - 1) ++ current.lift(index) ++ current.lift(index - 1) ++ current.drop(index + 1))
+      model.selectedFrame.write(Some(index - 1))
+    }
+
+    /** Attempts to move the frame with given index down */
+    def moveFrameDown(index: Int): Unit = {
+      log.info(s"moving frame [$index] down")
+      val current = model.frames()
+      model.frames.write(current.take(index) ++ current.lift(index + 1) ++ current.lift(index) ++ current.drop(index + 2))
+      model.selectedFrame.write(Some(index + 1))
+    }
+
+    /** Removes the frame with given index from frames list */
+    def deleteFrame(index: Int): Unit = {
+      log.info(s"deleting frame [$index]")
+      val current = model.frames()
+      model.frames.write(current.take(index) ++ current.drop(index + 1))
+      model.selectedFrame.write(None)
     }
 
     /** Replaces all modified settings with recommended values */
@@ -99,14 +133,15 @@ object mvc {
 
   /** Defines model with common fields
     *
-    * @param tick        the current update tick
-    * @param frame       the current rendering frame
-    * @param screen      the current screen size
-    * @param scale       the current screen scale
-    * @param mouse       current mouse coordinates
-    * @param page        currently displayed scanimation page
-    * @param frames      a list of frame images uploaded by the user
-    * @param scanimation the scanimation computing results
+    * @param tick          the current update tick
+    * @param frame         the current rendering frame
+    * @param screen        the current screen size
+    * @param scale         the current screen scale
+    * @param mouse         current mouse coordinates
+    * @param page          currently displayed scanimation page
+    * @param frames        a list of frame images uploaded by the user
+    * @param selectedFrame the index of the frame selected for the preview
+    * @param scanimation   the scanimation computing results
     */
   case class Model(tick: Writeable[Long] = Data(0),
                    frame: Writeable[Long] = Data(0),
@@ -115,7 +150,8 @@ object mvc {
                    mouse: Writeable[Vec2d] = Data(Vec2d.Zero),
                    page: Writeable[Page] = LazyData(router.parsePage),
 
-                   frames: Writeable[List[Transition[Frame]]] = Data(Nil),
+                   frames: Writeable[List[Transition[Frame]]] = LazyData(Nil),
+                   selectedFrame: Writeable[Option[Int]] = LazyData(None),
                    scanimation: TransitionData[CompleteScanimation] = Data(Missing()))
 
   /** Defines the single animation frame

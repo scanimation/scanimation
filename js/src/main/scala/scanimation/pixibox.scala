@@ -29,6 +29,9 @@ object pixibox {
     /** Registers the box within the context */
     override def register(box: Box): Unit = registerBox(box)
 
+    /** Removes the box from the context, use this to cleanup unwanted boxes */
+    override def unregister(box: Box): Unit = sys.error("unsupported")
+
     /** Returns the very root box that matches screen size */
     override val root: Box = new ContainerBox {
       override def id: BoxId = BoxId.Root

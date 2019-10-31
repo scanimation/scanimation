@@ -44,6 +44,8 @@ class BoxSpec extends Spec {
   /** Represents a context that ignores box registering */
   trait IgnoreRegister extends BoxContext {
     override def register(box: Box): Unit = {}
+
+    override def unregister(box: Box): Unit = {}
   }
 
   trait SimpleContext {

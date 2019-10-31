@@ -144,12 +144,22 @@ object jqbox extends Logging {
             .width(bounds.size.x)
             .height(bounds.size.y)
       }
+      box.layout.absDisplay /> {
+        case true => div.show()
+        case false => div.hide()
+      }
     }
 
     /** Registers the drawing canvas on the page */
     override def registerCanvas(box: DrawingBox, canvas: Any): Unit = canvas match {
       case element: HTMLCanvasElement =>
         boxes(box.id).append(element)
+    }
+
+    /** Removes the box from the context, use this to cleanup unwanted boxes */
+    override def unregister(box: Box): Unit = {
+      box.layout.relChildren().foreach(child => unregister(child))
+      boxes.get(box.id).foreach(dom => dom.remove())
     }
 
     /** Returns the very root box that matches screen size */
