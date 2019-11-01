@@ -31,6 +31,9 @@ object jqbox extends Logging {
   /** Creates new jq i box */
   def itemBox: JQuery = $("<i>").addClass("box")
 
+  /** Creates new jq input type text box */
+  def textInputBox: JQuery = $("""<input type="text">""").addClass("box")
+
   /** Creates new jq canvas box */
   def canvasBox: JQuery = $("<canvas>").addClass("box")
 
@@ -82,6 +85,30 @@ object jqbox extends Logging {
           }
           div.hover(hoverIn, hoverOut)
           div.mousedown(mouseDown)
+        case box: InputBox =>
+          val input = textInputBox
+            .css("padding", 0)
+            .css("border", 0)
+            .css("background-color", "transparent")
+            .css("text-align", "center")
+          input.on("input", { () =>
+            val next = input.value().toString
+            if (next != box.textValue()) box.textValue(next)
+          })
+          box.layout.style /> { case any =>
+            input
+              .css("font-family", box.textFont().family)
+              .css("font-size", box.textSize().px)
+              .css("color", box.textColor().toHex)
+            if (input.value().toString != box.textValue()) input.value(box.textValue())
+          }
+          div.append(box.background.asInstanceOf[JqDrawComponent].draw)
+          div.append(input)
+          box.layout.relBounds /> { case bounds =>
+            input
+              .width(bounds.size.x)
+              .height(bounds.size.y)
+          }
         case region: RegionBox =>
           div.append(region.background.asInstanceOf[JqDrawComponent].draw)
         case text: TextBox =>

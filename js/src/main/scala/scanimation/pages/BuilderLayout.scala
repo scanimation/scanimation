@@ -144,12 +144,18 @@ object BuilderLayout extends JqBoxLayout[BuilderPage] with Logging {
     isContainer && settingsWrapClass |> (
       _.fixedH(32)
       ),
-    isRegion && settingsInputClass |> (
+    inInput && settingsInputClass |> (
       _.fixedW(64),
       _.fixedH(22),
-      _.fillColor(greyHighlightColor),
+      _.fillColor(whiteColor),
       _.borderWidth(1),
+      _.borderColor(blackColor),
+      _.textSize(16),
+      _.textFont(robotoSlab),
     ),
+    inInput && settingsInputClass && Invalid |> (
+      _.borderColor(errorColor),
+      ),
     isGrid |> (
       _.spacing(6 xy 0)
       )
@@ -371,23 +377,36 @@ object BuilderLayout extends JqBoxLayout[BuilderPage] with Logging {
             }
           }),
           settingsWrap(text.mutate { text =>
-            controller.model.frames.data /> {
-              case frames => text.as(s"Frame count: ${frames.size} frames")
+            controller.model.frameCount /> {
+              case Some(count) => text.as(s"Frame count: $count frames")
+              case None => text.as("Frame count: N/A")
             }
           }),
           grid().fillX
             .mutate(_.columns(3))
             .sub(
               settingsWrap(text.as("Frame width:")),
-              settingsWrap(region.addClass(settingsInputClass)).fillX(0),
-              settingsWrap(text.as("%")),
-
-              settingsWrap(text.as("Frame width:")),
-              settingsWrap(region.addClass(settingsInputClass)).fillX(0),
+              settingsWrap(
+                input
+                  .validation("[0-9]+")
+                  .addClass(settingsInputClass)
+                  .mutate { input =>
+                    controller.model.frameWidth /> { case Some(value) => input.as(value.toString) }
+                  }
+                  .onChange { case value => controller.setFrameWidth(value.map(s => s.toInt)) }
+              ).fillX(0),
               settingsWrap(text.as("px")),
 
               settingsWrap(text.as("Frame overlap:")),
-              settingsWrap(region.addClass(settingsInputClass)).fillX(0),
+              settingsWrap(
+                input
+                  .validation("[0-9]+")
+                  .addClass(settingsInputClass)
+                  .mutate { input =>
+                    controller.model.frameOverlap /> { case Some(value) => input.as(value.toString) }
+                  }
+                  .onChange { case value => controller.setFrameOverlap(value.map(s => s.toInt)) }
+              ).fillX(0),
               settingsWrap(text.as("frames")),
             )
         ),

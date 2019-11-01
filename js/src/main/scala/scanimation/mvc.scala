@@ -57,7 +57,14 @@ object mvc {
         frame.forget()
       }
       model.frames.data /> {
-        case Nil => model.frameSize.write(None)
+        case Nil =>
+          model.frameSize.write(None)
+      }
+      (model.frames.data && model.frameOverlap) /> {
+        case (frames, Some(overlap)) if frames.nonEmpty && frames.size % overlap == 0 =>
+          model.frameCount.write(Some(frames.size / overlap))
+        case _ =>
+          model.frameCount.write(None)
       }
     }
 
@@ -69,7 +76,7 @@ object mvc {
     /** Opens up files upload dialogue to add frame images */
     def addFrames(): Unit = {
       log.info("adding frames")
-      val frames: List[Transition[Frame]] = (0 until 6).toList.map { index =>
+      val frames: List[Transition[Frame]] = (0 until 10).toList.map { index =>
         Loaded(0, 0, Frame(s"frame${index + 1}.png", 1920 xy 1080, s"foo$index"))
       }
       model.frames.addList(frames.map(f => Data(f)))
@@ -87,9 +94,23 @@ object mvc {
       log.info("showing animation")
     }
 
+    /** Updates the frame width setting to a given value */
+    def setFrameWidth(value: Option[Int]): Unit = {
+      log.info(s"setting frame width to [$value]")
+      model.frameWidth.write(value)
+    }
+
+    /** Updates the frame overlap setting to a given value */
+    def setFrameOverlap(value: Option[Int]): Unit = {
+      log.info(s"setting frame overlap to [$value]")
+      model.frameOverlap.write(value)
+    }
+
     /** Replaces all modified settings with recommended values */
     def resetSettings(): Unit = {
       log.info("resetting settings to default")
+      model.frameWidth.write(Some(9))
+      model.frameOverlap.write(Some(1))
     }
 
     /** Requests the server to produce the scanimation */
@@ -119,15 +140,18 @@ object mvc {
 
   /** Defines model with common fields
     *
-    * @param tick        the current update tick
-    * @param frame       the current rendering frame
-    * @param screen      the current screen size
-    * @param scale       the current screen scale
-    * @param mouse       current mouse coordinates
-    * @param page        currently displayed scanimation page
-    * @param frames      a list of frame images uploaded by the user
-    * @param frameSize   the image resolution of the first loaded frame
-    * @param scanimation the scanimation computing results
+    * @param tick         the current update tick
+    * @param frame        the current rendering frame
+    * @param screen       the current screen size
+    * @param scale        the current screen scale
+    * @param mouse        current mouse coordinates
+    * @param page         currently displayed scanimation page
+    * @param frames       a list of frame images uploaded by the user
+    * @param frameSize    the image resolution of the first loaded frame
+    * @param frameCount   the number of scanimation frames after overlap
+    * @param frameWidth   the width of the gap between grid lines in pixels
+    * @param frameOverlap the number of animation frames put into single scanimation frame
+    * @param scanimation  the scanimation computing results
     */
   case class Model(tick: Writeable[Long] = Data(0),
                    frame: Writeable[Long] = Data(0),
@@ -138,6 +162,9 @@ object mvc {
 
                    frames: ListData[TransitionData[Frame]] = ListData(),
                    frameSize: Writeable[Option[Vec2i]] = Data(None),
+                   frameCount: Writeable[Option[Int]] = Data(None),
+                   frameWidth: Writeable[Option[Int]] = Data(Some(9)),
+                   frameOverlap: Writeable[Option[Int]] = Data(Some(1)),
                    scanimation: TransitionData[CompleteScanimation] = Data(Missing()))
 
   /** Defines the single animation frame

@@ -6,6 +6,7 @@ import scanimation.common._
 import scanimation.icon.MaterialDesign
 
 import scala.reflect.ClassTag
+import scala.util.matching.Regex
 
 //noinspection LanguageFeature
 object box {
@@ -203,6 +204,21 @@ object box {
     }.bindAndRegister()
   }
 
+  /** Creates a box with text input */
+  def input(id: BoxId = BoxId())(implicit context: BoxContext, assignedStyler: Styler): InputBox = {
+    val assignedId = id
+    new InputBox {
+      override val background: DrawComponent = context.drawComponent
+
+      override def id: BoxId = assignedId
+
+      override def styler: Styler = assignedStyler
+    }.bindAndRegister()
+  }
+
+  /** Creates a box with text input */
+  def input(implicit context: BoxContext, assignedStyler: Styler): InputBox = this.input()
+
   /** Selects any box */
   val anyBox: Selector[Box] = _ => true
 
@@ -261,6 +277,9 @@ object box {
 
   /** Selector for image boxes */
   val isImage: Selector[ImageBox] = isA[ImageBox]
+
+  /** Selector for text input boxes */
+  val inInput: Selector[InputBox] = isA[InputBox]
 
   /** The id of the box */
   case class BoxId(value: String = uuid) {
@@ -625,6 +644,8 @@ object box {
     val Enabled = BoxClass()
     /** Interactive boxes that are disabled for mouse interactions */
     val Disabled = BoxClass()
+    /** Input boxes with value that did not pass the validation */
+    val Invalid = BoxClass()
 
     /** Creates a unique box class */
     def apply(): BoxClass = new BoxClass() {}
@@ -1288,6 +1309,52 @@ object box {
   trait DrawingBox extends ContainerBox {
     /** Registers the drawing canvas on the page once it's ready */
     def registerCanvas(canvas: Any): Unit
+  }
+
+  /** Style for text input fields */
+  trait InputStyle {
+    this: Box =>
+    /** The regex to be used for input string validation */
+    lazy val validationRegex: StyleKey[Regex] = VisualStyleKey(".*".r, this)
+    /** Whether or not the input should allow invalid characters */
+    lazy val validationStrict = VisualStyleKey(false, this)
+  }
+
+  /** Represents a text box with editable text */
+  trait InputBox extends RegionBox with TextStyle with InputStyle {
+    /** Contains some(value) if input passes the validation, None otherwise */
+    val validatedValue: Writeable[Option[String]] = LazyData(None)
+
+    /** Updates the value of the input */
+    def as(value: String): InputBox = {
+      textValue(value)
+      this
+    }
+
+    /** Sets the validation regex for this box */
+    def validation(regex: String): InputBox = {
+      validationRegex(regex.r)
+      this
+    }
+
+    /** Executes the given handler when value is changed */
+    def onChange(handler: EndListener[Option[String]]): InputBox = {
+      validatedValue /> handler
+      this
+    }
+
+    override def bind(): Unit = {
+      super.bind()
+      layout.style /> { case _ =>
+        if (validationRegex().pattern.matcher(textValue()).matches()) {
+          validatedValue.write(Some(textValue()))
+          removeClass(BoxClass.Invalid)
+        } else {
+          validatedValue.write(None)
+          addClass(BoxClass.Invalid)
+        }
+      }
+    }
   }
 
   object Stretcher {
