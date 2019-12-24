@@ -1,5 +1,6 @@
 package scanimation.pages
 
+import lib.dropzone._
 import scanimation.box.BoxClass._
 import scanimation.box.IconStyle.IconValue
 import scanimation.box._
@@ -263,7 +264,7 @@ object BuilderLayout extends JqBoxLayout[BuilderPage] with Logging {
 
   /** Returns the builder section for frames */
   private def buildFramesSection(controller: Controller): Box = {
-    val dropZone = buildDropZone()
+    val dropZone = buildDropZone(controller)
     val frameList = buildFrameList(controller)
     val framesOrZone = region(framesOrZoneId).fillBoth.mutate { parent =>
       controller.model.frames.data /> {
@@ -290,10 +291,13 @@ object BuilderLayout extends JqBoxLayout[BuilderPage] with Logging {
   }
 
   /** Returns dropzone box */
-  private def buildDropZone(): Box = {
-    container(dropZoneId).fillBoth.sub(
-      text.as("Drop images here...")
-    )
+  private def buildDropZone(controller: Controller): Box = {
+    container(dropZoneId)
+      .fillBoth
+      .dropzone("/foo")
+      .sub(
+        text.as("Drop images here...")
+      )
   }
 
   /** Returns the frame list box */
