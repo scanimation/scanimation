@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+    <title>Flex text</title>
+    <link rel="stylesheet/less" type="text/css" href="/flex.less">
+    <link href="https://fonts.googleapis.com/css?family=Roboto|Roboto+Slab:400&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <script src="//cdnjs.cloudflare.com/ajax/libs/less.js/3.9.0/less.min.js"></script>
+</head>
+<body ontouchstart="" id="wispy">
+<div id="content">
+    <div id="menu">
+        <div id="frames-section" class="section">
+            <div>
+                <i class="material-icons">photo_library</i>
+                <span>Animation Frames</span>
+            </div>
+            <div id="frames-dropzone"><span>Drop images here...</span></div>
+            <div id="frames-list"></div>
+            <div id="frames-controls">
+                <button id="frames-add">
+                    <i class="material-icons">add_circle</i>
+                    <span>Add</span>
+                </button>
+                <button id="frames-clear">
+                    <i class="material-icons">cancel</i>
+                    <span>Clear</span>
+                </button>
+            </div>
+            <button id="frames-show">
+                <i class="material-icons">play_arrow</i>
+                <span>Show Animation</span>
+            </button>
+        </div>
+        <div id="settings-section" class="section">
+            <div>
+                <i class="material-icons">settings_applications</i>
+                <span>Settings</span>
+            </div>
+            <div class="settings-row">
+                <span>Image size:</span>
+                <span id="settings-image-size">N/A</span>
+            </div>
+            <div class="settings-row">
+                <span>Frame count:</span>
+                <span id="settings-frame-count">N/A</span>
+            </div>
+            <div class="settings-row">
+                <span class="settings-fixed">Frame width:</span>
+                <input id="settings-frame-width" type="text" value="9"/>
+                <span>px</span>
+            </div>
+            <div class="settings-row">
+                <span class="settings-fixed">Frame overlap:</span>
+                <input id="settings-frame-overlap" type="text" value="1"/>
+                <span>frames</span>
+            </div>
+        </div>
+        <div id="process-section" class="section">
+            <div>
+                <i class="material-icons">cloud</i>
+                <span>Process and Export</span>
+            </div>
+        </div>
+    </div>
+    <div id="main">
+        <div id="preview-section" class="section">
+            <div>
+                <i class="material-icons">theaters</i>
+                <span>Preview</span>
+            </div>
+            <canvas id="preview"></canvas>
+        </div>
+    </div>
+</div>
+
+<script type="text/javascript" src="/lib/jquery-2.1.3.min.js"></script>
+<script type="text/javascript" src="/lib/pixi.min.js"></script>
+<script type="text/javascript" src="/lib/pixi-filters.js"></script>
+<script type="text/javascript" src="/lib/URI.js"></script>
+<script type="text/javascript" src="/lib/dropzone.js"></script>
+<script type="text/javascript" src="/bundle.js"></script>
+<script type="text/javascript" src="/flex.js"></script>
+</body>
+</html>
