@@ -5,7 +5,8 @@ target/**
 project/target/*
 node/node_modules/**
 out/.*
-out/*.js
+out/bundle.js
+out/scanimation.js
 out/timestamp.txt
 *.class
 *.sjsir
