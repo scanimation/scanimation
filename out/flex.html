@@ -3,100 +3,107 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
-    <title>Flex text</title>
+    <title>Scanimation</title>
     <link rel="stylesheet/less" type="text/css" href="/flex.less">
-    <link href="https://fonts.googleapis.com/css?family=Roboto|Roboto+Slab:400&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css?family=Roboto&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/less.js/3.9.0/less.min.js"></script>
 </head>
 <body ontouchstart="" id="wispy">
+<div class="overlay">
+    <div>
+        <div class="overlay-header">
+            <span class="overlay-title">Clear frames</span>
+            <button class="overlay-close"><i class="material-icons">close</i></button>
+        </div>
+        <div class="overlay-content"><p>Are you sure you want to clear all frames from the frame list?</p></div>
+        <div class="overlay-controls">
+            <button id="frames-clear-yes" class="primary"><span>YES</span></button>
+            <button class="overlay-close"><span>CANCEL</span></button>
+        </div>
+    </div>
+</div>
 <div id="content">
-    <div id="menu">
+    <div id="main">
+        <div id="preview-section" class="section">
+            <div>
+                <span>Preview</span>
+            </div>
+            <canvas id="preview"></canvas>
+        </div>
+    </div>
+    <div class="menu">
         <div id="frames-section" class="section">
             <div>
-                <i class="material-icons">photo_library</i>
                 <span>Frames</span>
+                <div class="fill"></div>
+                <button id="frames-help" class="help" title="Help: Frames">?</button>
             </div>
             <div id="frames-dropzone"><span>Drop images here...</span></div>
-            <div id="frames-list"></div>
+            <div id="frames-list">
+                <div class="row">
+                    <span class="index">1</span>
+                    <span class="name fill">frame-001.png</span>
+                    <button class="up" title="Move frame up"><i class="material-icons">arrow_upward</i></button>
+                    <button class="down" title="Move frame down"><i class="material-icons">arrow_downward</i></button>
+                    <button class="remove" title="Remove frame"><i class="material-icons">close</i></button>
+                </div>
+            </div>
             <div id="frames-controls">
-                <button id="frames-add" class="round">
-                    <i class="material-icons">add</i>
-                </button>
-                <button id="frames-clear" class="round">
-                    <i class="material-icons">delete</i>
-                </button>
-                <button id="frames-show" class="round">
-                    <i class="material-icons">play_arrow</i>
-                </button>
+                <button id="frames-show" class="round" title="Play animation in preview"><i class="material-icons">play_arrow</i></button>
+                <button id="frames-clear" class="round" title="Remove all frames"><i class="material-icons">delete</i></button>
+                <button id="frames-add" class="round primary" title="Add frame images"><i class="material-icons">add</i></button>
             </div>
         </div>
         <div id="settings-section" class="section">
             <div>
-                <i class="material-icons">settings_applications</i>
                 <span>Settings</span>
-                <button id="settings-reset" class="round">
-                    <i class="material-icons">settings_backup_restore</i>
-                </button>
+                <button id="settings-reset" class="round" title="Restore settings default values"><i class="material-icons">settings_backup_restore</i></button>
             </div>
             <div class="settings-row">
                 <span>Image size</span>
                 <span id="settings-image-size">N/A</span>
+                <div class="fill"></div>
+                <button id="settings-image-size-help" class="help" title="Help: Image size">?</button>
             </div>
             <div class="settings-row">
                 <span>Frame count</span>
                 <span id="settings-frame-count">N/A</span>
+                <div class="fill"></div>
+                <button id="settings-frame-count-help" class="help" title="Help: Frame count">?</button>
+            </div>
+            <div class="settings-row">
+                <span>Direction</span>
+                <select id="settings-direction">
+                    <option value="Left">Left</option>
+                    <option value="Right">Right</option>
+                    <option value="Up">Up</option>
+                    <option value="Down">Down</option>
+                </select>
+                <div class="fill"></div>
+                <button id="settings-direction-help" class="help" title="Help: Direction">?</button>
             </div>
             <div class="settings-row">
                 <span>Frame width</span>
                 <input id="settings-frame-width" type="text" value="9"/>
                 <span>px</span>
+                <div class="fill"></div>
+                <button id="settings-frame-width-help" class="help" title="Help: Frame width">?</button>
             </div>
             <div class="settings-row">
                 <span>Frame overlap</span>
                 <input id="settings-frame-overlap" type="text" value="1"/>
                 <span>frames</span>
-            </div>
-            <div class="settings-row">
-                <span>Direction</span>
-                <select id="settings-direction">
-                    <option value="LeftToRight">Left to Right</option>
-                    <option value="RightToLeft">Right to Left</option>
-                    <option value="TopToBottom">Top to Bottom</option>
-                    <option value="BottomToTop">Bottom to Top</option>
-                </select>
+                <div class="fill"></div>
+                <button id="settings-frame-overlap-help" class="help" title="Help: Frame overlap">?</button>
             </div>
         </div>
-        <div id="process-section" class="section">
-            <div>
-                <i class="material-icons">cloud</i>
-                <span>Process and Export</span>
-            </div>
-            <button id="process-compute">
-                <i class="material-icons">flash_on</i>
-                <span>Compute Scanimation</span>
-            </button>
-            <button id="process-show">
-                <i class="material-icons">play_circle_filled</i>
-                <span>Show Scanimation</span>
-            </button>
-            <button id="process-download-scanimation">
-                <i class="material-icons">image</i>
-                <span>Download Scanimation</span>
-            </button>
-            <button id="process-download-grid">
-                <i class="material-icons">texture</i>
-                <span>Download Grid</span>
-            </button>
-        </div>
-    </div>
-    <div id="main">
-        <div id="preview-section" class="section">
-            <div>
-                <i class="material-icons">theaters</i>
-                <span>Preview</span>
-            </div>
-            <canvas id="preview"></canvas>
+        <button id="scanimate" class="primary" title="Calculate scanimation"><span>SCANIMATE</span></button>
+        <div id="results-section">
+            <button id="scanimation-play" class="round" title="Play scanimation in preview"><i class="material-icons">play_arrow</i></button>
+            <button id="scanimation-reset" class="round" title="Reset scanimation"><i class="material-icons">delete</i></button>
+            <button id="scanimation-grid" class="" title="Download scanimation grid"><i class="material-icons">texture</i><span>GRID</span></button>
+            <button id="scanimation-image" class="primary" title="Download scanimation image"><i class="material-icons">image</i><span>IMAGE</span></button>
         </div>
     </div>
 </div>
