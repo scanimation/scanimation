@@ -6,6 +6,7 @@ $(function () {
     $("#frames-list").hide();
     $("#results-section").hide();
 
+    let template = $("#frames-list > .row").detach();
     $("#frames-add").click(function () {
         $("#frames-dropzone").hide();
         $("#frames-list").show();
@@ -13,7 +14,6 @@ $(function () {
         $("#frames-show").prop("disabled", false);
         $("#scanimate").prop("disabled", false);
 
-        let template = $("#frames-list > .row").detach();
         let index;
         for (index = 0; index < 6; index++) {
             let copy = template.clone();
@@ -32,12 +32,24 @@ $(function () {
         }
     });
 
+    $("#frames-clear").click(function () {
+        $("#frames-clear-overlay").css("display", "flex");
+    });
+    $("#frames-clear-yes").click(function () {
+        $("#frames-list > .row").detach();
+        $("#frames-clear-overlay").hide();
+    });
+
     $("#scanimate").click(function () {
         $("#scanimate").hide();
         $("#results-section").css("display", "flex");
     });
 
+    $(".overlay").hide();
+    $(".overlay > div").click(function (event) {
+        event.stopPropagation();
+    });
     $(".overlay-close").click(function () {
         $(".overlay").hide();
-    })
+    });
 });

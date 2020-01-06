@@ -10,19 +10,35 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/less.js/3.9.0/less.min.js"></script>
 </head>
 <body ontouchstart="" id="wispy">
-<div class="overlay">
+
+<div id="frames-clear-overlay" class="overlay overlay-close">
     <div>
         <div class="overlay-header">
-            <span class="overlay-title">Clear frames</span>
+            <span class="overlay-title">Clear all frames?</span>
             <button class="overlay-close"><i class="material-icons">close</i></button>
         </div>
-        <div class="overlay-content"><p>Are you sure you want to clear all frames from the frame list?</p></div>
+        <div class="overlay-content"><p>Deleting all animation frames will allow you to upload a different animation sequence.</p></div>
         <div class="overlay-controls">
-            <button id="frames-clear-yes" class="primary"><span>YES</span></button>
             <button class="overlay-close"><span>CANCEL</span></button>
+            <button id="frames-clear-yes"><span>CLEAR</span></button>
         </div>
     </div>
 </div>
+
+<div id="settings-reset-overlay" class="overlay overlay-close">
+    <div>
+        <div class="overlay-header">
+            <span class="overlay-title">Reset settings to defaults?</span>
+            <button class="overlay-close"><i class="material-icons">close</i></button>
+        </div>
+        <div class="overlay-content"><p>By resetting settings you will set all fields to values, recommended for A4 or US letter size paper.</p></div>
+        <div class="overlay-controls">
+            <button class="overlay-close"><span>CANCEL</span></button>
+            <button id="settings-reset-yes"><span>RESET</span></button>
+        </div>
+    </div>
+</div>
+
 <div id="content">
     <div id="main">
         <div id="preview-section" class="section">
