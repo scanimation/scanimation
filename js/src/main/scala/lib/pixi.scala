@@ -1,34 +1,30 @@
 package lib
 
-import lib.facade.pixi.{Application, Graphics}
-import scanimation.box._
+import lib.facade.pixi.Graphics
 import scanimation.common.{Color, Colors, Vec2d}
 import scanimation.util.logging.Logging
-import org.scalajs.dom.raw.HTMLCanvasElement
-
-import scala.scalajs.js
 
 /** The HTML5 Creation Engine
   * https://www.pixijs.com/ */
 object pixi extends Logging {
   override protected def logKey: String = "pixi"
 
-  /** Creates pixi application contained in given drawing box */
-  def create(box: DrawingBox): Application = {
-    val app = new Application(js.Dynamic.literal(
-      width = box.layout.relBounds().size.x.toInt max 1,
-      height = box.layout.relBounds().size.y.toInt max 1,
-      antialias = true,
-      resolution = 1,
-      transparent = true
-    ))
-    val canvas = app.view.asInstanceOf[HTMLCanvasElement]
-    box.layout.relBounds /> {
-      case bounds => app.renderer.resize(bounds.size.x max 1, bounds.size.y max 1)
-    }
-    box.registerCanvas(canvas)
-    app
-  }
+  //  /** Creates pixi application contained in given drawing box */
+  //  def create(box: DrawingBox): Application = {
+  //    val app = new Application(js.Dynamic.literal(
+  //      width = box.layout.relBounds().size.x.toInt max 1,
+  //      height = box.layout.relBounds().size.y.toInt max 1,
+  //      antialias = true,
+  //      resolution = 1,
+  //      transparent = true
+  //    ))
+  //    val canvas = app.view.asInstanceOf[HTMLCanvasElement]
+  //    box.layout.relBounds /> {
+  //      case bounds => app.renderer.resize(bounds.size.x max 1, bounds.size.y max 1)
+  //    }
+  //    box.registerCanvas(canvas)
+  //    app
+  //  }
 
   implicit class GraphicsOps(val graphics: Graphics) extends AnyVal {
     /** Draws a rectangle with given size */

@@ -3,14 +3,12 @@ package scanimation
 import java.util.UUID
 
 import lib.facade.pixi._
+import org.scalajs.dom
 import scanimation.common._
-import scanimation.mvc.Controller
+import scanimation.util.animation
 import scanimation.util.animation.{Animation, ChaseInOut, Delay, FadeIn, FadeOut, FlipIn, FlipOut, OffsetIn, OffsetOut, Parallel}
 import scanimation.util.global.GlobalContext
 import scanimation.util.logging.Logging
-import scanimation.util.spring.SpritePositionSpring
-import scanimation.util.{animation, spring}
-import org.scalajs.dom
 
 import scala.annotation.tailrec
 import scala.concurrent.duration.FiniteDuration
@@ -45,27 +43,6 @@ object ops extends GlobalContext with Logging {
       error.printStackTrace()
       throw error
   }
-
-  /** Builds a container bound to screen center and scale */
-  def centerStage(implicit controller: Controller): Container = new Container().bindScale(controller.model.scale).springToCenter
-
-  /** Builds a container bound to screen top left corner and scale */
-  def topLeftStage(implicit controller: Controller): Container = new Container().bindScale(controller.model.scale)
-
-  /** Builds a container bound to screen top and scale */
-  def topStage(implicit controller: Controller): Container = new Container().bindScale(controller.model.scale).springTo(0.5 xy 0)
-
-  /** Builds a container bound to screen top right corner and scale */
-  def topRightStage(implicit controller: Controller): Container = new Container().bindScale(controller.model.scale).springTo(1 xy 0)
-
-  /** Builds a container bound to screen bottom left corner and scale */
-  def bottomLeftStage(implicit controller: Controller): Container = new Container().bindScale(controller.model.scale).springTo(0 xy 1)
-
-  /** Builds a container bound to screen bottom and scale */
-  def bottomStage(implicit controller: Controller): Container = new Container().bindScale(controller.model.scale).springTo(0.5 xy 1)
-
-  /** Builds a container bound to screen bottom right corner and scale */
-  def bottomRightStage(implicit controller: Controller): Container = new Container().bindScale(controller.model.scale).springTo(1 xy 1)
 
   /** Builds a delay animation with given amount of time */
   def delay(time: FiniteDuration = animation.AnimationDelay): Animation = Delay(time)
@@ -150,17 +127,6 @@ object ops extends GlobalContext with Logging {
 
     /** Changes the filters of the object */
     def filterWith(filters: List[Filter]): A = a.mutate { a => a.filters = filters }
-
-    /** Binds the location to given place */
-    def springTo(target: Vec2d)(implicit controller: Controller): A = a.mutate { a =>
-      a.positionAt(controller.model.screen() * target)
-      val s = SpritePositionSpring(a)
-      controller.model.screen /> { case size => s.target = size * target }
-      spring.add(s)
-    }
-
-    /** Binds the location to screen center */
-    def springToCenter(implicit controller: Controller): A = a.springTo(Vec2d.Center)
 
     /** Binds the scale to a given bind */
     def bindScale(data: Data[Double]): A = a.mutate { a => data /> { case scale => a.scaleTo(scale) } }

@@ -21,12 +21,6 @@ object mvc {
     val timer = new Timer()
     val animator = new Animator()
 
-    /** Updates the rendering screen size */
-    def setScreenSize(size: Vec2i): Unit = model.screen.write(size)
-
-    /** Updates the global mouse position on the screen */
-    def setMousePosition(mouse: Vec2d): Unit = model.mouse.write(mouse)
-
     /** Launches the controller at a given application path */
     def start(path: String): Future[Unit] = Future {
       log.info(s"starting at path [$path]")
@@ -142,9 +136,6 @@ object mvc {
     *
     * @param tick         the current update tick
     * @param frame        the current rendering frame
-    * @param screen       the current screen size
-    * @param scale        the current screen scale
-    * @param mouse        current mouse coordinates
     * @param page         currently displayed scanimation page
     * @param frames       a list of frame images uploaded by the user
     * @param frameSize    the image resolution of the first loaded frame
@@ -155,9 +146,6 @@ object mvc {
     */
   case class Model(tick: Writeable[Long] = Data(0),
                    frame: Writeable[Long] = Data(0),
-                   screen: Writeable[Vec2i] = Data(0 xy 0),
-                   scale: Writeable[Double] = Data(1.0),
-                   mouse: Writeable[Vec2d] = Data(Vec2d.Zero),
                    page: Writeable[Page] = LazyData(router.parsePage),
 
                    frames: ListData[TransitionData[Frame]] = ListData(),

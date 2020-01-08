@@ -1,18 +1,14 @@
 package scanimation
 
 import lib.history
-import scanimation.box._
+import org.querki.jquery._
 import scanimation.common._
 import scanimation.conf.{JsReader, ScanimationConfig}
-import scanimation.jqbox._
 import scanimation.mvc._
-import scanimation.style._
 import scanimation.util._
 import scanimation.util.global.GlobalContext
 import scanimation.util.http._
 import scanimation.util.logging.Logging
-import org.querki.jquery._
-import org.scalajs.dom._
 
 import scala.concurrent.Future
 
@@ -43,14 +39,7 @@ object app extends App with GlobalContext with Logging {
     val model = Model()
     val controller = Controller(model, conf)
     val future = for {
-      _ <- fonts.load(robotoSlab :: materialIcons :: Nil)
-      _ <- tilesets.load(ImageStyle.EmptyTileset :: Nil)
-      _ = {
-        val refreshScreenSize = () => controller.setScreenSize(window.innerWidth.toInt xy window.innerHeight.toInt)
-        window.addEventListener("resize", (_: Event) => refreshScreenSize(), useCapture = false)
-        refreshScreenSize()
-        scaleToScreen(controller)
-      }
+      _ <- UnitFuture
       _ <- spring.load()(controller)
       _ <- animation.load()(controller)
       _ <- controller.start(path)

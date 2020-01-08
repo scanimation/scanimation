@@ -1,22 +1,138 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
     <title>Loading...</title>
-    <link rel="stylesheet" type="text/css" href="/styles.css">
-    <link href="https://fonts.googleapis.com/css?family=Roboto|Roboto+Slab:400&display=swap" rel="stylesheet">
+    <link rel="stylesheet/less" type="text/css" href="/styles.less">
+    <link href="https://fonts.googleapis.com/css?family=Roboto&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/less.js/3.9.0/less.min.js"></script>
 </head>
-<body ontouchstart="">
+<body ontouchstart="" id="wispy">
+
+<div id="frames-clear-overlay" class="overlay overlay-close">
+    <div>
+        <div class="overlay-header">
+            <span class="overlay-title">Clear all frames?</span>
+            <button class="overlay-close"><i class="material-icons">close</i></button>
+        </div>
+        <div class="overlay-content"><p>Deleting all animation frames will allow you to upload a different animation sequence.</p></div>
+        <div class="overlay-controls">
+            <button class="overlay-close"><span>CANCEL</span></button>
+            <button id="frames-clear-yes"><span>CLEAR</span></button>
+        </div>
+    </div>
+</div>
+
+<div id="settings-reset-overlay" class="overlay overlay-close">
+    <div>
+        <div class="overlay-header">
+            <span class="overlay-title">Reset settings to defaults?</span>
+            <button class="overlay-close"><i class="material-icons">close</i></button>
+        </div>
+        <div class="overlay-content"><p>By resetting settings you will set all fields to values, recommended for A4 or US letter size paper.</p></div>
+        <div class="overlay-controls">
+            <button class="overlay-close"><span>CANCEL</span></button>
+            <button id="settings-reset-yes"><span>RESET</span></button>
+        </div>
+    </div>
+</div>
+
+<div id="content">
+    <div id="main">
+        <div id="preview-section" class="section">
+            <div>
+                <span>Preview</span>
+            </div>
+            <canvas id="preview"></canvas>
+        </div>
+    </div>
+    <div class="menu">
+        <div id="frames-section" class="section">
+            <div>
+                <span>Frames</span>
+                <div class="fill"></div>
+                <button id="frames-help" class="help" title="Help: Frames">?</button>
+            </div>
+            <div id="frames-dropzone"><span>Drop images here...</span></div>
+            <div id="frames-list">
+                <div class="row">
+                    <span class="index">1</span>
+                    <span class="name fill">frame-001.png</span>
+                    <button class="up" title="Move frame up"><i class="material-icons">arrow_upward</i></button>
+                    <button class="down" title="Move frame down"><i class="material-icons">arrow_downward</i></button>
+                    <button class="remove" title="Remove frame"><i class="material-icons">close</i></button>
+                </div>
+            </div>
+            <div id="frames-controls">
+                <button id="frames-show" class="round" title="Play animation in preview"><i class="material-icons">play_arrow</i></button>
+                <button id="frames-clear" class="round" title="Remove all frames"><i class="material-icons">delete</i></button>
+                <button id="frames-add" class="round primary" title="Add frame images"><i class="material-icons">add</i></button>
+            </div>
+        </div>
+        <div id="settings-section" class="section">
+            <div>
+                <span>Settings</span>
+                <button id="settings-reset" class="round" title="Restore settings default values"><i class="material-icons">settings_backup_restore</i></button>
+            </div>
+            <div class="settings-row">
+                <span>Image size</span>
+                <span id="settings-image-size">N/A</span>
+                <div class="fill"></div>
+                <button id="settings-image-size-help" class="help" title="Help: Image size">?</button>
+            </div>
+            <div class="settings-row">
+                <span>Frame count</span>
+                <span id="settings-frame-count">N/A</span>
+                <div class="fill"></div>
+                <button id="settings-frame-count-help" class="help" title="Help: Frame count">?</button>
+            </div>
+            <div class="settings-row">
+                <span>Direction</span>
+                <select id="settings-direction">
+                    <option value="Left">Left</option>
+                    <option value="Right">Right</option>
+                    <option value="Up">Up</option>
+                    <option value="Down">Down</option>
+                </select>
+                <div class="fill"></div>
+                <button id="settings-direction-help" class="help" title="Help: Direction">?</button>
+            </div>
+            <div class="settings-row">
+                <span>Frame width</span>
+                <input id="settings-frame-width" type="text" value="9"/>
+                <span>px</span>
+                <div class="fill"></div>
+                <button id="settings-frame-width-help" class="help" title="Help: Frame width">?</button>
+            </div>
+            <div class="settings-row">
+                <span>Frame overlap</span>
+                <input id="settings-frame-overlap" type="text" value="1"/>
+                <span>frames</span>
+                <div class="fill"></div>
+                <button id="settings-frame-overlap-help" class="help" title="Help: Frame overlap">?</button>
+            </div>
+        </div>
+        <button id="scanimate" class="primary" title="Calculate scanimation"><span>SCANIMATE</span></button>
+        <div id="results-section">
+            <button id="scanimation-play" class="round" title="Play scanimation in preview"><i class="material-icons">play_arrow</i></button>
+            <button id="scanimation-reset" class="round" title="Reset scanimation"><i class="material-icons">delete</i></button>
+            <button id="scanimation-grid" class="" title="Download scanimation grid"><i class="material-icons">texture</i><span>GRID</span></button>
+            <button id="scanimation-image" class="primary" title="Download scanimation image"><i class="material-icons">image</i><span>IMAGE</span></button>
+        </div>
+    </div>
+</div>
+
+<div id="background"></div>
+
 <script type="text/javascript" src="/lib/jquery-2.1.3.min.js"></script>
 <script type="text/javascript" src="/lib/pixi.min.js"></script>
 <script type="text/javascript" src="/lib/pixi-filters.js"></script>
-<script type="text/javascript" src="/lib/fontfaceobserver.js"></script>
 <script type="text/javascript" src="/lib/URI.js"></script>
 <script type="text/javascript" src="/lib/dropzone.js"></script>
 <script type="text/javascript" src="/bundle.js"></script>
+<script type="text/javascript" src="/temp.js"></script>
 <script type="text/javascript" src="/scanimation.js"></script>
-<div id="offscreen"></div>
 </body>
 </html>

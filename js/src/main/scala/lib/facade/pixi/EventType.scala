@@ -1,5 +1,7 @@
 package lib.facade.pixi
 
+import scala.util.Try
+
 object EventType {
   val Progress = "progress"
   val PointerDown = "pointerdown"
@@ -7,4 +9,8 @@ object EventType {
   val PointerUpOutside = "pointerupoutside"
   val PointerOver = "pointerover"
   val PointerOut = "pointerout"
+
+  Try {
+
+  }
 }
