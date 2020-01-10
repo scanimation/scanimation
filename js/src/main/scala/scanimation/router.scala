@@ -19,7 +19,7 @@ object router extends Logging {
 
   /** A routing table for all application pages */
   val routes: List[Route[_]] = List(
-    Route("/", format0(BuilderPage), BuilderLayout),
+    Route("/", format0(BuilderPage), BuilderLogic),
   )
 
   /** The default route to fallback to on errors */
@@ -32,7 +32,7 @@ object router extends Logging {
     * @param tag    the class reference for the page
     * @tparam A the type of page
     */
-  case class Route[A <: Page](path: List[PathPart], format: MF[A], tag: Class[A], layout: PageLayout[A])
+  case class Route[A <: Page](path: List[PathPart], format: MF[A], tag: Class[A], logic: PageLogic[A])
 
   /** Part of the route path between slashed */
   trait PathPart
@@ -45,7 +45,7 @@ object router extends Logging {
 
   object Route {
     /** Creates route at given path */
-    def apply[A <: Page](path: String, format: MF[A], layout: PageLayout[A])(implicit tag: ClassTag[A]): Route[A] = {
+    def apply[A <: Page](path: String, format: MF[A], layout: PageLogic[A])(implicit tag: ClassTag[A]): Route[A] = {
       Route(split(path), format, tag.runtimeClass.asInstanceOf[Class[A]], layout)
     }
 

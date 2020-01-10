@@ -370,10 +370,29 @@ html, body {
             background-color: white;
           }
 
+          &.dropping {
+            background-color: @primary100;
+
+            > span {
+              display: none;
+            }
+
+            > i {
+              display: initial;
+            }
+          }
+
           > span {
+            display: initial;
             font-size: @textMedium;
             color: @primary500;
             .disable-select();
+          }
+
+          > i {
+            display: none;
+            color: white;
+            font-size: 48px;
           }
         }
 

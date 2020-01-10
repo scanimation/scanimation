@@ -12,21 +12,21 @@ object pages {
     (controller.model.page.map(p => router.findRoute(p)) && currentRoute) /> {
       case (route, None) =>
         currentRoute.write(Some(route))
-        route.layout.open(controller)
-        route.layout.updateUntyped(controller.model.page())
+        route.logic.open(controller)
+        route.logic.updateUntyped(controller.model.page())
       case (route, Some(current)) =>
         if (!current.eq(route)) {
           currentRoute.write(Some(route))
-          current.layout.close(controller)
-          route.layout.open(controller)
+          current.logic.close(controller)
+          route.logic.open(controller)
         }
-        route.layout.updateUntyped(controller.model.page())
+        route.logic.updateUntyped(controller.model.page())
     }
   }
 
   /** Wraps the page layout */
-  trait PageLayout[A <: Page] {
-    /** Returns the parent box for the page layout when page opens */
+  trait PageLogic[A <: Page] {
+    /** Executed once the page is opened */
     def open(controller: Controller): Unit
 
     /** Is called after the page is opened when inner page values change */
