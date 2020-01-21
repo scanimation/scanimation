@@ -3,7 +3,9 @@ package scanimation
 import java.util.UUID
 
 import lib.facade.pixi._
+import org.querki.jquery.JQuery
 import org.scalajs.dom
+import org.scalajs.dom.raw.DOMList
 import scanimation.common._
 import scanimation.util.animation
 import scanimation.util.animation.{Animation, ChaseInOut, Delay, FadeIn, FadeOut, FlipIn, FlipOut, OffsetIn, OffsetOut, Parallel}
@@ -190,6 +192,16 @@ object ops extends GlobalContext with Logging {
   implicit class AnimationListOps(val list: List[Animation]) extends AnyVal {
     /** Executes animations in parallel */
     def parallel: Animation = Parallel(list)
+  }
+
+  implicit class DomListOps[A](val list: DOMList[A]) extends AnyVal {
+    /** Converts DOM list into Scala list */
+    def asList: List[A] = (0 until list.length).map(index => list.item(index)).toList
+  }
+
+  implicit class JqueryOps(val jquery: JQuery) extends AnyVal {
+    /** Reads the first jquery element as DOM element of type A */
+    def firstAs[A]: A = jquery.get(0).asInstanceOf[A]
   }
 
 }

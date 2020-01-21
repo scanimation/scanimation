@@ -1,7 +1,7 @@
 package scanimation
 
 import org.scalajs.dom
-import scanimation.common.Transition.{Loaded, Missing}
+import scanimation.common.Transition.Missing
 import scanimation.common._
 import scanimation.conf.ScanimationConfig
 import scanimation.model.Note
@@ -41,14 +41,8 @@ object mvc {
     def bindFrames(): Unit = {
       implicit val framesListenerId: ListenerId = ListenerId()
       model.frames.onAdd { case (id, frame) =>
-        frame /> {
-          case Loaded(start, end, value) =>
-            // TODO: add failure logic if frames are of an incorrect size
-            model.frameSize.write(Some(value.size))
-        }
       }
       model.frames.onRemove { case (id, frame) =>
-        frame.forget()
       }
       model.frames.data /> {
         case Nil =>
@@ -68,12 +62,9 @@ object mvc {
     }
 
     /** Opens up files upload dialogue to add frame images */
-    def addFrames(): Unit = {
+    def addFrames(frames: List[Frame]): Unit = {
       log.info("adding frames")
-      val frames: List[Transition[Frame]] = (0 until 10).toList.map { index =>
-        Loaded(0, 0, Frame(s"frame${index + 1}.png", 1920 xy 1080, s"foo$index"))
-      }
-      model.frames.addList(frames.map(f => Data(f)))
+      model.frames.addList(frames)
     }
 
     /** Removes all of the frames from frames list */
@@ -148,7 +139,7 @@ object mvc {
                    frame: Writeable[Long] = Data(0),
                    page: Writeable[Page] = LazyData(router.parsePage),
 
-                   frames: ListData[TransitionData[Frame]] = ListData(),
+                   frames: ListData[Frame] = ListData(),
                    frameSize: Writeable[Option[Vec2i]] = Data(None),
                    frameCount: Writeable[Option[Int]] = Data(None),
                    frameWidth: Writeable[Option[Int]] = Data(Some(9)),
@@ -157,11 +148,11 @@ object mvc {
 
   /** Defines the single animation frame
     *
-    * @param name the name of the uploaded file
-    * @param size the size of the uploaded image
-    * @param url  the url of the frame image uploaded on the server
+    * @param name    the name of the imported file
+    * @param size    the size of the imported image
+    * @param content the image content
     */
-  case class Frame(name: String, size: Vec2i, url: String)
+  case class Frame(name: String, size: Vec2i, content: String)
 
   /** Contains scanimation processing results
     *

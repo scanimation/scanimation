@@ -1,8 +1,6 @@
 .idea/*
 .git/*
-target/**
-*/target/**
-project/target/*
+target/
 node/node_modules/**
 out/.*
 out/bundle.js
