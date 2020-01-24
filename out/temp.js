@@ -45,7 +45,7 @@ $(function () {
         $("#results-section").css("display", "flex");
     });
 
-    $(".overlay").hide();
+    // $(".overlay").hide();
     $(".overlay > div").click(function (event) {
         event.stopPropagation();
     });
