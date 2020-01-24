@@ -22,13 +22,15 @@ object BuilderLogic extends PageLogic[BuilderPage] with Logging with GlobalConte
 
   /** Returns the parent box for the page layout when page opens */
   override def open(controller: Controller): Unit = {
-    framesDropzone.filedrop(
-      handler = { files =>
-        val frames = files.map(file => FrameFileAsync(file.name, file.`type`, Future.successful(file.data)))
-        readImages(controller, frames)
-      },
-      overClass = "dropping"
-    )
+    framesDropzone
+      .click(() => framesInput.click())
+      .filedrop(
+        handler = { files =>
+          val frames = files.map(file => FrameFileAsync(file.name, file.`type`, Future.successful(file.data)))
+          readImages(controller, frames)
+        },
+        overClass = "dropping"
+      )
     framesAdd.click(() => framesInput.click())
     framesInput.change(() => {
       val files = framesInput.firstAs[HTMLInputElement].files.asList

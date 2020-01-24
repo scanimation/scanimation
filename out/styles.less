@@ -115,7 +115,6 @@ html, body {
       .overlay-header {
         .hbox();
         justify-content: space-between;
-        margin: 0 0 @padLarge 0;
 
         .overlay-close {
           padding: 2px;
@@ -141,10 +140,7 @@ html, body {
       }
 
       .overlay-content {
-        padding: @padMedium 0 @padLarge 0;
-        //border-width: 2px 0 2px 0;
-        //border-style: solid;
-        //border-color: @grey200;
+        padding: @padLarge 0 @padLarge 0;
 
         p {
           color: @grey700;
@@ -154,12 +150,12 @@ html, body {
       .overlay-controls {
         .hbox();
         justify-content: flex-end;
-        margin: @padMedium 0 0 0;
 
         button {
-          padding: 0 @padMedium 0 @padMedium;
+          padding: @padMedium;
           margin: 0 0 0 @padMedium;
           background-color: white;
+          height: inherit;
           .clear-shadow();
 
           &:hover {
@@ -206,14 +202,14 @@ html, body {
 
     &:disabled {
       cursor: auto;
-      background-color: @grey500;
+      background-color: @grey400;
 
       > i {
-        color: @grey300;
+        color: @grey200;
       }
 
       > span {
-        color: @grey300;
+        color: @grey200;
       }
     }
 
@@ -230,14 +226,14 @@ html, body {
 
       &:disabled {
         cursor: auto;
-        background-color: @grey500;
+        background-color: @grey400;
 
         > i {
-          color: @grey300;
+          color: @grey200;
         }
 
         > span {
-          color: @grey300;
+          color: @grey200;
         }
       }
 
