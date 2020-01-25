@@ -1,0 +1,111 @@
+button {
+  transition-duration: 100ms;
+  border: 0;
+  outline: 0;
+  padding: 0 @padLarge 0 @padLarge;
+  height: 48px;
+  border-radius: @padSmall;
+  background-color: white;
+  .shadow();
+
+  &:hover {
+    background-color: @grey100;
+    cursor: pointer;
+  }
+
+  &:active {
+    background-color: @grey300;
+    padding: 0 @padLarge 0 @padLarge;
+  }
+
+  &:disabled {
+    cursor: auto;
+    background-color: @grey400;
+
+    > i {
+      color: @grey200;
+    }
+
+    > span {
+      color: @grey200;
+    }
+  }
+
+  &.primary {
+    background-color: @primary500;
+
+    &:hover {
+      background-color: lighten(@primary500, 10%);
+    }
+
+    &:active {
+      background-color: darken(@primary500, 10%);
+    }
+
+    &:disabled {
+      cursor: auto;
+      background-color: @grey400;
+
+      > i {
+        color: @grey200;
+      }
+
+      > span {
+        color: @grey200;
+      }
+    }
+
+    > i {
+      font-size: @iconMedium;
+      color: white;
+    }
+
+    > span {
+      color: white;
+    }
+  }
+
+  &.round {
+    width: 48px;
+    border-radius: 24px;
+
+    > i {
+      font-size: @iconLarge;
+    }
+  }
+
+  &.help {
+    padding: 2px;
+    font-size: @textMedium;
+    color: @grey500;
+    width: @textLarge;
+    height: @textLarge;
+    border-radius: @textLarge;
+    background-color: white;
+    .clear-shadow();
+
+    &:hover {
+      background-color: @grey300;
+      color: black;
+    }
+  }
+
+  .hbox();
+  align-items: center;
+  justify-content: center;
+
+  > i {
+    font-size: @iconMedium;
+    color: black;
+  }
+
+  > span {
+    font-size: @textMedium;
+    margin: 0 0 0 @padSmall;
+    color: black;
+  }
+
+  > span:first-child {
+    margin: 0;
+  }
+}

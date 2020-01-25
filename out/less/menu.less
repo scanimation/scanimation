@@ -1,0 +1,17 @@
+.menu {
+  flex: 0 0 350px;
+
+  .vbox();
+
+  > *:first-child {
+    margin: 0;
+  }
+
+  > * {
+    margin: @padLarge 0 0 0;
+  }
+
+  @import "frames-section";
+  @import "settings-section";
+  @import "results-section";
+}

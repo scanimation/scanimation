@@ -102,6 +102,7 @@ lazy val scanimationJS = scanimation.js
 lazy val moveJS = taskKey[Unit]("moveJS")
 lazy val pushJS = taskKey[Unit]("pushJS")
 lazy val nodeJS = taskKey[Unit]("nodeJS")
+lazy val lessJS = taskKey[Unit]("lessJS")
 lazy val deployHeroku = taskKey[Unit]("deployHeroku")
 
 def copyFile(from: String, to: String): Unit = {
@@ -187,5 +188,14 @@ deployHeroku := {
     """heroku container:login""",
     """docker push registry.heroku.com/wispy-scanimation/web""",
     """heroku container:release web --app wispy-scanimation"""
+  )
+}
+
+lessJS := {
+  println("[scanimation] Compiling LESS into CSS")
+  execute(
+    """cd ./out""",
+    """npm install --global less""",
+    """lessc styles.less styles.css"""
   )
 }

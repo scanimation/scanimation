@@ -4,12 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
     <title>Loading...</title>
-    <link rel="stylesheet/less" type="text/css" href="/styles.less">
     <link href="https://fonts.googleapis.com/css?family=Roboto&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/less.js/3.9.0/less.min.js"></script>
 </head>
-<body ontouchstart="" id="wispy">
+<body ontouchstart="" id="wispy" style="display: none">
 
 <div id="frames-clear-overlay" class="overlay overlay-close">
     <div>
@@ -37,6 +35,10 @@
             <button id="settings-reset-yes"><span>RESET</span></button>
         </div>
     </div>
+</div>
+
+<div id="loading">
+    <span>Loading...</span>
 </div>
 
 <div id="offscreen">
@@ -108,14 +110,14 @@
             </div>
             <div class="settings-row">
                 <span>Frame width</span>
-                <input id="settings-frame-width" type="text" value="9"/>
+                <input id="settings-frame-width" type="text" value=""/>
                 <span>px</span>
                 <div class="fill"></div>
                 <button id="settings-frame-width-help" class="help" title="Help: Frame width">?</button>
             </div>
             <div class="settings-row">
                 <span>Frame overlap</span>
-                <input id="settings-frame-overlap" type="text" value="1"/>
+                <input id="settings-frame-overlap" type="text" value=""/>
                 <span>frames</span>
                 <div class="fill"></div>
                 <button id="settings-frame-overlap-help" class="help" title="Help: Frame overlap">?</button>

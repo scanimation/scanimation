@@ -22,20 +22,22 @@ object mvc {
     val animator = new Animator()
 
     /** Launches the controller at a given application path */
-    def start(path: String): Future[Unit] = Future {
-      log.info(s"starting at path [$path]")
-      router.start(this)
-      pages.pages.start(this)
-      timer.start(60, () => model.tick.write(model.tick() + 1))
-      animator.start(() => model.frame.write(model.frame() + 1))
-      log.info(s"started")
+    def start(path: String): Future[Unit] = for {
+      _ <- UnitFuture
+      _ = log.info(s"starting at path [$path]")
 
-      model.page /> {
+      _ = router.start(this)
+      _ <- pages.pages.start(this)
+      _ = timer.start(60, () => model.tick.write(model.tick() + 1))
+      _ = animator.start(() => model.frame.write(model.frame() + 1))
+      _ = log.info(s"started")
+
+      _ = model.page /> {
         case page => http.updateTitle(s"Scanimation - ${page.title}")
       }
-      bindFrames()
-      log.info("bound")
-    }
+      _ = bindFrames()
+      _ = log.info("bound")
+    } yield ()
 
     /** Binds the frame list listeners */
     def bindFrames(): Unit = {
@@ -91,11 +93,18 @@ object mvc {
       model.frameOverlap.write(value)
     }
 
+    /** Updates the scanimation direction setting to a given value */
+    def setDirection(value: Directions.Value): Unit = {
+      log.info(s"setting direction to [$value]")
+      model.direction.write(value)
+    }
+
     /** Replaces all modified settings with recommended values */
     def resetSettings(): Unit = {
       log.info("resetting settings to default")
-      model.frameWidth.write(Some(9))
-      model.frameOverlap.write(Some(1))
+      model.direction.write(Default.direction)
+      model.frameWidth.write(Some(Default.frameWidth))
+      model.frameOverlap.write(Some(Default.frameOverlap))
     }
 
     /** Requests the server to produce the scanimation */
@@ -123,6 +132,13 @@ object mvc {
     }
   }
 
+  /** Default values for scanimation settings */
+  object Default {
+    val frameWidth = 9
+    val frameOverlap = 1
+    val direction: Directions.Value = Directions.Left
+  }
+
   /** Defines model with common fields
     *
     * @param tick         the current update tick
@@ -142,8 +158,9 @@ object mvc {
                    frames: ListData[Frame] = ListData(),
                    frameSize: Writeable[Option[Vec2i]] = Data(None),
                    frameCount: Writeable[Option[Int]] = Data(None),
-                   frameWidth: Writeable[Option[Int]] = Data(Some(9)),
-                   frameOverlap: Writeable[Option[Int]] = Data(Some(1)),
+                   frameWidth: Writeable[Option[Int]] = Data(Some(Default.frameWidth)),
+                   frameOverlap: Writeable[Option[Int]] = Data(Some(Default.frameOverlap)),
+                   direction: Writeable[Directions.Value] = Data(Default.direction),
                    scanimation: TransitionData[CompleteScanimation] = Data(Missing()))
 
   /** Defines the single animation frame
@@ -184,5 +201,10 @@ object mvc {
   case class Detection(note: Note,
                        frequency: Double,
                        cents: Double)
+
+  /** Describes the direction where scanimation grid moves to */
+  object Directions extends Enumeration {
+    val Left, Right, Up, Down = Value
+  }
 
 }

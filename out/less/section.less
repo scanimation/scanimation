@@ -1,0 +1,29 @@
+.section {
+  padding: @padLarge;
+  border-radius: @padSmall;
+  background-color: white;
+  .shadow();
+
+  .vbox();
+
+  > div:first-child { //header
+    margin: 0 0 @padSmall 0;
+
+    .hbox();
+    align-items: center;
+
+    > span { // title
+      .fill();
+      font-size: @textLarge;
+      .disable-select();
+    }
+
+    > button { // section action
+      margin: -24px 0 -24px @padSmall;
+    }
+  }
+
+  > * { // content
+    margin: @padMedium 0 0 0;
+  }
+}

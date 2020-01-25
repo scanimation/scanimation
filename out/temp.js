@@ -1,17 +1,11 @@
 $(function () {
-    $("#frames-clear").prop("disabled", true);
-    $("#frames-show").prop("disabled", true);
-    $("#settings-reset").prop("disabled", true);
     $("#scanimate").prop("disabled", true);
-    $("#frames-list").hide();
     $("#results-section").hide();
 
     let template = $("#frames-list > .row").detach();
     // $("#frames-add").click(function () {
     //     $("#frames-dropzone").hide();
     //     $("#frames-list").show();
-    //     $("#frames-clear").prop("disabled", false);
-    //     $("#frames-show").prop("disabled", false);
     //     $("#scanimate").prop("disabled", false);
     //
     //     let index;
@@ -32,24 +26,9 @@ $(function () {
     //     }
     // });
 
-    $("#frames-clear").click(function () {
-        $("#frames-clear-overlay").css("display", "flex");
-    });
-    $("#frames-clear-yes").click(function () {
-        $("#frames-list > .row").detach();
-        $("#frames-clear-overlay").hide();
-    });
-
     $("#scanimate").click(function () {
         $("#scanimate").hide();
         $("#results-section").css("display", "flex");
     });
 
-    // $(".overlay").hide();
-    $(".overlay > div").click(function (event) {
-        event.stopPropagation();
-    });
-    $(".overlay-close").click(function () {
-        $(".overlay").hide();
-    });
 });

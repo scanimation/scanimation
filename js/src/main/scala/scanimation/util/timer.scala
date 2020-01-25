@@ -3,6 +3,8 @@ package scanimation.util
 import org.querki.jquery._
 import org.scalajs.dom._
 
+import scala.concurrent.{Future, Promise}
+
 object timer {
 
   class Timer {
@@ -30,6 +32,9 @@ object timer {
   }
 
   class Awaitor {
+    /** Internal promise to be used for futures */
+    private val promise = Promise[Unit]
+
     /** Starts the awaiter with given condition and code, which will execute code once the condition is true */
     def start(condition: () => Boolean, code: () => Unit): Unit = {
       window.requestAnimationFrame(_ => update(condition, code))
@@ -39,20 +44,26 @@ object timer {
     def update(condition: () => Boolean, code: () => Unit): Unit = {
       if (condition.apply()) {
         code.apply()
+        promise.success()
       } else {
         window.requestAnimationFrame(_ => update(condition, code))
       }
     }
+
+    /** Returns a future that will be resolved once awaitor completes */
+    def future: Future[Unit] = promise.future
   }
 
   object Awaitor {
     /** Executes the given code once the given condition is met */
-    def await(condition: => Boolean)(code: => Unit): Unit = {
-      new Awaitor().start(() => condition, () => code)
+    def await(condition: => Boolean)(code: => Unit): Awaitor = {
+      val awaitor = new Awaitor()
+      awaitor.start(() => condition, () => code)
+      awaitor
     }
 
     /** Executes the given code once the given selector returns one or more elements */
-    def onceExists(selector: String)(code: (String, JQuery) => Unit): Unit = {
+    def onceExists(selector: String)(code: (String, JQuery) => Unit): Awaitor = {
       Awaitor.await($(selector).length > 0)(code.apply(selector, $(selector)))
     }
   }

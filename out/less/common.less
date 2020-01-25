@@ -1,0 +1,42 @@
+.vbox {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.hbox {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+}
+
+.cbox {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+}
+
+.fill {
+  flex-grow: 1;
+}
+
+.shadow {
+  -webkit-box-shadow: 0 2px 4px 1px fade(black, 25%);
+  -moz-box-shadow: 0 2px 4px 1px fade(black, 25%);
+  box-shadow: 0 2px 4px 1px fade(black, 25%);
+}
+
+.clear-shadow {
+  -webkit-box-shadow: none;
+  -moz-box-shadow: none;
+  box-shadow: none;
+}
+
+.disable-select {
+  user-select: none; // Chrome and Opera
+  -webkit-user-select: none; // Safari
+  -khtml-user-select: none; // Konqueror HTML
+  -moz-user-select: none; // Firefox
+  -ms-user-select: none; // Internet Explorer/Edge
+}

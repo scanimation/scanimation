@@ -1,0 +1,68 @@
+#frames-list {
+  .fill();
+  .vbox();
+  background-color: @grey200;
+
+  > div {
+    .hbox();
+    align-items: center;
+    height: 40px;
+    background-color: white;
+    border-width: 2px 0 0 0;
+    border-color: @grey200;
+    border-style: solid;
+    transition-duration: 100ms;
+
+    &:hover {
+      cursor: pointer;
+      background-color: @grey200;
+    }
+
+    &:active {
+      background-color: @grey300;
+    }
+
+    &.selected {
+      background-color: @grey200;
+
+      &:active {
+        background-color: @grey200;
+      }
+    }
+
+    &.selected > button {
+      display: block;
+    }
+
+    span {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      display: inline-block;
+      margin: 0 0 0 @padMedium;
+      .disable-select();
+
+      &.index {
+        color: @grey600;
+      }
+    }
+
+    button {
+      display: none;
+      .clear-shadow();
+      background-color: transparent;
+      border-radius: 0;
+      width: 32px;
+      height: 40px;
+
+      &:hover {
+        background-color: @grey300;
+      }
+
+      i {
+        color: black;
+        font-size: @textLarge;
+      }
+    }
+  }
+}

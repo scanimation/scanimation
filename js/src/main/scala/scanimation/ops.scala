@@ -3,7 +3,7 @@ package scanimation
 import java.util.UUID
 
 import lib.facade.pixi._
-import org.querki.jquery.JQuery
+import org.querki.jquery._
 import org.scalajs.dom
 import org.scalajs.dom.raw.DOMList
 import scanimation.common._
@@ -202,6 +202,74 @@ object ops extends GlobalContext with Logging {
   implicit class JqueryOps(val jquery: JQuery) extends AnyVal {
     /** Reads the first jquery element as DOM element of type A */
     def firstAs[A]: A = jquery.get(0).asInstanceOf[A]
+
+    /** Toggles the visibility in a safe way, better than show/hide */
+    def visible(flag: Boolean = true): JQuery = {
+      jquery.each { element =>
+        val one = $(element)
+        val cssDisplay = Option(one.css("display")).filter(v => v.nonEmpty).getOrElse("initial")
+        if (flag) {
+          if (cssDisplay == "none") {
+            val storedDisplay = one.data("display").map(v => v.toString).getOrElse("initial")
+            one.css("display", storedDisplay)
+          }
+        } else {
+          one.data("display", cssDisplay)
+          one.hide()
+        }
+      }
+    }
+
+    /** Hides the element in a safe way, better than hide */
+    def hidden(): JQuery = visible(false)
+
+    /** Enables the button */
+    def enable(): JQuery = jquery.prop("disabled", false)
+
+    /** Disables the button */
+    def disable(): JQuery = jquery.prop("disabled", true)
+  }
+
+  implicit class WriteableOps[A](val model: Writeable[A]) extends AnyVal {
+    /** Binds the model to dropdown */
+    def bindDropdown(jquery: JQuery, viewCode: A => String, modelCode: String => A, controllerCode: A => Unit): JQuery = {
+      model /> { case next =>
+        val last = jquery.value().toString
+        val nextString = viewCode.apply(next)
+        if (last != nextString) jquery.value(nextString)
+      }
+      jquery.change(() => {
+        val next = modelCode.apply(jquery.value().toString)
+        val last = model.read
+        if (next != last) controllerCode.apply(next)
+      })
+    }
+  }
+
+  implicit class WriteableOptionOps[A](val model: Writeable[Option[A]]) extends AnyVal {
+    /** Binds the model to text field with validation, adds the "bad" class to the text field when validation fails */
+    def bindValidatedText(jquery: JQuery, viewCode: A => String, modelCode: String => A, validationCode: A => Boolean, controllerCode: Option[A] => Unit): JQuery = {
+      model /> {
+        case Some(next) =>
+          val last = jquery.value().toString
+          val nextString = viewCode.apply(next)
+          if (last != nextString) jquery.value(nextString)
+      }
+      jquery.on("input", () => {
+        val nextString = jquery.value().toString
+        val last = model.read
+        Try(modelCode.apply(nextString))
+          .toOption
+          .filter(v => validationCode.apply(v)) match {
+          case Some(next) if next != last =>
+            controllerCode.apply(Some(next))
+            jquery.removeClass("bad")
+          case _ =>
+            controllerCode.apply(None)
+            jquery.addClass("bad")
+        }
+      })
+    }
   }
 
 }

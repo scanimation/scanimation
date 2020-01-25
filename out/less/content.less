@@ -1,0 +1,19 @@
+#content {
+  position: fixed;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+
+  .hbox();
+
+  > *:first-child {
+    margin: @padLarge;
+  }
+
+  > * {
+    margin: @padLarge @padLarge @padLarge 0;
+  }
+
+  @import "menu";
+  @import "main";
+}

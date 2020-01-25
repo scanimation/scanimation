@@ -1,0 +1,54 @@
+#settings-section {
+  input, select {
+    width: 60px;
+    padding: 2px;
+    font-size: @textMedium;
+    box-sizing: border-box;
+    border-color: @grey400;
+    border-width: 0 0 2px 0;
+
+    &.bad {
+      background-color: @red100;
+      border-color: @red500;
+    }
+  }
+
+  input {
+    text-align: center;
+  }
+
+  select {
+    -moz-appearance: none;
+    -webkit-appearance: none;
+    appearance: none;
+
+    option {
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: clip;
+
+      padding: 0;
+      margin: 0;
+    }
+  }
+
+  .settings-row {
+    height: 25px;
+    .hbox();
+    align-items: center;
+
+    span {
+      padding: 2px;
+    }
+  }
+
+  .settings-row > *:first-child {
+    display: inline-block;
+    width: 130px;
+    margin: 0;
+  }
+
+  .settings-row > * {
+    margin: 0 0 0 @padSmall;
+  }
+}
