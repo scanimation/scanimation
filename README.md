@@ -23,7 +23,4 @@ heroku logs --tail --app wispy-scanimation
 
 Todo:
 ```
-- move the defaults settings logic into controller/model
-- bug: after settings reset, the invalid options are still highlighted
-- bug: when multiple frames are removed, dropzone does not appear
 ```

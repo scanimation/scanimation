@@ -214,8 +214,10 @@ object ops extends GlobalContext with Logging {
             one.css("display", storedDisplay)
           }
         } else {
-          one.data("display", cssDisplay)
-          one.hide()
+          if (cssDisplay != "none") {
+            one.data("display", cssDisplay)
+            one.hide()
+          }
         }
       }
     }
@@ -254,6 +256,7 @@ object ops extends GlobalContext with Logging {
           val last = jquery.value().toString
           val nextString = viewCode.apply(next)
           if (last != nextString) jquery.value(nextString)
+          jquery.removeClass("bad")
       }
       jquery.on("input", () => {
         val nextString = jquery.value().toString

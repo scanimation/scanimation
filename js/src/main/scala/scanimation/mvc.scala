@@ -36,6 +36,7 @@ object mvc {
         case page => http.updateTitle(s"Scanimation - ${page.title}")
       }
       _ = bindFrames()
+      _ = bindSettings()
       _ = log.info("bound")
     } yield ()
 
@@ -47,8 +48,10 @@ object mvc {
       model.frames.onRemove { case (id, frame) =>
       }
       model.frames.data /> {
+        case head :: xs =>
+          model.imageSize.write(Some(head.size))
         case Nil =>
-          model.frameSize.write(None)
+          model.imageSize.write(None)
       }
       (model.frames.data && model.frameOverlap) /> {
         case (frames, Some(overlap)) if frames.nonEmpty && frames.size % overlap == 0 =>
@@ -58,15 +61,30 @@ object mvc {
       }
     }
 
+    /** Binds the settings listeners */
+    def bindSettings(): Unit = {
+      (model.frameWidth && model.frameOverlap && model.direction) /> {
+        case ((Some(width), Some(overlap)), direction) if width == Default.frameWidth && overlap == Default.frameOverlap && direction == Default.direction =>
+          model.defaultSettings.write(true)
+        case _ =>
+          model.defaultSettings.write(false)
+      }
+    }
+
     /** Redirect to given page within scanimation */
     def showPage(page: Page): Unit = {
       model.page.write(page)
     }
 
     /** Opens up files upload dialogue to add frame images */
-    def addFrames(frames: List[Frame]): Unit = {
+    def addFrames(frames: List[Frame], errors: List[ImportError]): Unit = {
       log.info("adding frames")
-      model.frames.addList(frames)
+      if (frames.nonEmpty) {
+        val size = frames.head.size
+        model.frames.addList(frames.filter(frame => frame.size == size).sortBy(frame => frame.name))
+        val allErrors = errors ++ frames.filter(frame => frame.size != size).map(frame => SizeError(frame.name, size))
+        model.framesImportErrors.write(allErrors.sortBy(error => error.name))
+      }
     }
 
     /** Removes all of the frames from frames list */
@@ -141,26 +159,31 @@ object mvc {
 
   /** Defines model with common fields
     *
-    * @param tick         the current update tick
-    * @param frame        the current rendering frame
-    * @param page         currently displayed scanimation page
-    * @param frames       a list of frame images uploaded by the user
-    * @param frameSize    the image resolution of the first loaded frame
-    * @param frameCount   the number of scanimation frames after overlap
-    * @param frameWidth   the width of the gap between grid lines in pixels
-    * @param frameOverlap the number of animation frames put into single scanimation frame
-    * @param scanimation  the scanimation computing results
+    * @param tick               the current update tick
+    * @param frame              the current rendering frame
+    * @param page               currently displayed scanimation page
+    * @param frames             a list of frame images uploaded by the user
+    * @param framesImportErrors a list of errors that occurred during last frame import
+    * @param imageSize          the image resolution of the first loaded frame
+    * @param frameCount         the number of scanimation frames after overlap
+    * @param frameWidth         the width of the gap between grid lines in pixels
+    * @param frameOverlap       the number of animation frames put into single scanimation frame
+    * @param direction          the direction of scanimation grid movement
+    * @param defaultSettings    true if all of the settings are set to default values
+    * @param scanimation        the scanimation computing results
     */
   case class Model(tick: Writeable[Long] = Data(0),
                    frame: Writeable[Long] = Data(0),
                    page: Writeable[Page] = LazyData(router.parsePage),
 
                    frames: ListData[Frame] = ListData(),
-                   frameSize: Writeable[Option[Vec2i]] = Data(None),
+                   framesImportErrors: Writeable[List[ImportError]] = LazyData(Nil),
+                   imageSize: Writeable[Option[Vec2i]] = Data(None),
                    frameCount: Writeable[Option[Int]] = Data(None),
                    frameWidth: Writeable[Option[Int]] = Data(Some(Default.frameWidth)),
                    frameOverlap: Writeable[Option[Int]] = Data(Some(Default.frameOverlap)),
                    direction: Writeable[Directions.Value] = Data(Default.direction),
+                   defaultSettings: Writeable[Boolean] = LazyData(true),
                    scanimation: TransitionData[CompleteScanimation] = Data(Missing()))
 
   /** Defines the single animation frame
@@ -170,6 +193,30 @@ object mvc {
     * @param content the image content
     */
   case class Frame(name: String, size: Vec2i, content: String)
+
+  /** Represents an error that occurred during frame import */
+  trait ImportError {
+    /** Imported file name */
+    def name: String
+
+    /** Human readable message for this error */
+    def asString: String
+  }
+
+  /** Frame image format/extension error */
+  case class FormatError(name: String) extends ImportError {
+    override def asString: String = "unsupported file format"
+  }
+
+  /** Frame image data loading error */
+  case class LoadingError(name: String) extends ImportError {
+    override def asString: String = "failed to load file"
+  }
+
+  /** Frame image size error */
+  case class SizeError(name: String, expected: Vec2i) extends ImportError {
+    override def asString: String = s"did not match first frame size: ${expected.x} x ${expected.y}"
+  }
 
   /** Contains scanimation processing results
     *

@@ -2,7 +2,7 @@ package scanimation.pages
 
 import lib.filedrop._
 import org.querki.jquery._
-import org.scalajs.dom.raw.{FileReader, HTMLImageElement, HTMLInputElement}
+import org.scalajs.dom.raw.{Event, FileReader, HTMLImageElement, HTMLInputElement}
 import scanimation.common._
 import scanimation.mvc._
 import scanimation.ops._
@@ -49,32 +49,36 @@ object BuilderLogic extends PageLogic[BuilderPage] with Logging with GlobalConte
   /** Binds the frames section logic */
   def bindFrames(controller: Controller): Unit = {
     /** Describes a frame file */
-    case class FrameFileAsync(name: String, tpe: String, content: Future[String])
+    case class FrameFileAsync(name: String, tpe: String, content: Future[Option[String]])
 
     /** Processes the list of uploaded frame files */
     def readImages(controller: Controller, files: List[FrameFileAsync]): Unit = {
       for {
         _ <- UnitFuture
-        filtered = files.filter(file => file.tpe.startsWith("image/")).sortBy(file => file.name)
+        (filtered, nonImages) = files.partition(file => file.tpe.startsWith("image/"))
         _ = log.info(s"processing [${filtered.size}/${files.size}] images")
         contents <- Future.sequence(filtered.map(file => file.content))
         _ = log.info(s"loaded [${contents.size}] images content")
-        frames <- Future.sequence(filtered.zip(contents).map { case (file, content) =>
-          val promise = Promise[Frame]
+        framesAndErrors <- Future.sequence(filtered.zip(contents).map { case (file, Some(content)) =>
+          val promise = Promise[Option[Frame]]
           val image = $("<img>").firstAs[HTMLImageElement]
           image.onload = { _ =>
             val width = if (image.naturalWidth > 0) image.naturalWidth else image.width
             val height = if (image.naturalHeight > 0) image.naturalHeight else image.height
-            promise.success(Frame(
+            promise.success(Some(Frame(
               name = file.name,
               size = width xy height,
               content = content
-            ))
+            )))
           }
+          image.addEventListener("error", (e: Event) => promise.success(None))
           image.src = content
           promise.future
         })
-        _ = controller.addFrames(frames)
+        frames = framesAndErrors.zip(filtered).collect { case (Some(frame), _) => frame }
+        loadingErrors = framesAndErrors.zip(filtered).collect { case (None, original) => LoadingError(original.name) }
+        formatErrors = nonImages.map(file => FormatError(file.name))
+        _ = controller.addFrames(frames, loadingErrors ++ formatErrors)
       } yield ()
     }
 
@@ -95,7 +99,7 @@ object BuilderLogic extends PageLogic[BuilderPage] with Logging with GlobalConte
       .click(() => framesInput.click())
       .filedrop(
         handler = { files =>
-          val frames = files.map(file => FrameFileAsync(file.name, file.`type`, Future.successful(file.data)))
+          val frames = files.map(file => FrameFileAsync(file.name, file.`type`, Future.successful(Some(file.data))))
           readImages(controller, frames)
         },
         overClass = "dropping"
@@ -104,9 +108,10 @@ object BuilderLogic extends PageLogic[BuilderPage] with Logging with GlobalConte
     framesInput.change(() => {
       val files = framesInput.firstAs[HTMLInputElement].files.asList
       val frames = files.map { file =>
-        val promise = Promise[String]
+        val promise = Promise[Option[String]]
         val reader = new FileReader()
-        reader.onload = { _ => promise.success(reader.result.toString) }
+        reader.onload = { _ => promise.success(Some(reader.result.toString)) }
+        reader.onerror = { _ => promise.success(None) }
         reader.readAsDataURL(file)
         FrameFileAsync(file.name, file.`type`, promise.future)
       }
@@ -122,6 +127,8 @@ object BuilderLogic extends PageLogic[BuilderPage] with Logging with GlobalConte
   }
 
   private lazy val settingsDirection = $("#settings-direction")
+  private lazy val settingsImageSize = $("#settings-image-size")
+  private lazy val settingsFrameCount = $("#settings-frame-count")
   private lazy val settingsFrameWidth = $("#settings-frame-width")
   private lazy val settingsFrameOverlap = $("#settings-frame-overlap")
   private lazy val settingsReset = $("#settings-reset")
@@ -130,6 +137,14 @@ object BuilderLogic extends PageLogic[BuilderPage] with Logging with GlobalConte
 
   /** Binds the settings section logic */
   def bindSettings(controller: Controller): Unit = {
+    controller.model.imageSize /> {
+      case Some(size) => settingsImageSize.text(s"${size.x} x ${size.y}")
+      case None => settingsImageSize.text("N/A")
+    }
+    controller.model.frameCount /> {
+      case Some(count) => settingsFrameCount.text(count.toString)
+      case None => settingsFrameCount.text("N/A")
+    }
     controller.model.direction.bindDropdown(
       settingsDirection,
       direction => direction.toString,
@@ -150,12 +165,9 @@ object BuilderLogic extends PageLogic[BuilderPage] with Logging with GlobalConte
       value => value > 0,
       controller.setFrameOverlap
     )
-    (controller.model.direction && controller.model.frameWidth && controller.model.frameOverlap) /> { case ((direction, width), overlap) =>
-      if (direction == Default.direction && width.contains(Default.frameWidth) && overlap.contains(Default.frameOverlap)) {
-        settingsReset.disable()
-      } else {
-        settingsReset.enable()
-      }
+    controller.model.defaultSettings /> {
+      case true => settingsReset.disable()
+      case false => settingsReset.enable()
     }
     settingsReset.click(() => settingsResetOverlay.visible())
     settingsResetYes.click(() => {

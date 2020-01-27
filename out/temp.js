@@ -2,6 +2,8 @@ $(function () {
     $("#scanimate").prop("disabled", true);
     $("#results-section").hide();
 
+
+
     let template = $("#frames-list > .row").detach();
     // $("#frames-add").click(function () {
     //     $("#frames-dropzone").hide();
