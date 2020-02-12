@@ -226,10 +226,13 @@ object ops extends GlobalContext with Logging {
     def hidden(): JQuery = visible(false)
 
     /** Enables the button */
-    def enable(): JQuery = jquery.prop("disabled", false)
+    def enable(flag: Boolean = true): JQuery = jquery.prop("disabled", !flag)
 
     /** Disables the button */
-    def disable(): JQuery = jquery.prop("disabled", true)
+    def disable(): JQuery = jquery.enable(false)
+
+    /** Sets the list id to given value */
+    def id(id: ListElementId): JQuery = jquery.attr("data-id", id)
   }
 
   implicit class WriteableOps[A](val model: Writeable[A]) extends AnyVal {
@@ -273,6 +276,11 @@ object ops extends GlobalContext with Logging {
         }
       })
     }
+  }
+
+  implicit class ListElementIdOps(val id: ListElementId) extends AnyVal {
+    /** Selects all elements with data id equal to give string */
+    def item: JQuery = $(s"""[data-id="$id"]""")
   }
 
 }

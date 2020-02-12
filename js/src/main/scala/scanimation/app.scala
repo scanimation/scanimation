@@ -44,7 +44,7 @@ object app extends App with GlobalContext with Logging {
       _ <- animation.load()(controller)
       _ <- controller.start(path)
     } yield ()
-    future.whenFailed(up => log.error("failed to build ui", up))
+    future.whenFailed { case up => log.error("failed to build ui", up) }
   }
 
   /** Cleans up location after discord oauth2 flow */

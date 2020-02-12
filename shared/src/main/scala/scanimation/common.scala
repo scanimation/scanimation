@@ -4,7 +4,7 @@ import java.lang.System.currentTimeMillis
 import java.time.OffsetDateTime
 import java.util.UUID
 
-import scanimation.common.Transition.{Failed, Loaded, Loading, Missing}
+import scanimation.common.Transition.{Failed, Loaded, Loading, Missing, TransitionException}
 
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
@@ -370,6 +370,12 @@ object common {
     /** Reads the list data for the given element */
     def read(id: ListElementId): Option[A] = map.get(id)
 
+    /** Returns the current list of element ids */
+    def ids: List[ListElementId] = list
+
+    /** Returns the index of list data item within the list */
+    def indexOf(id: ListElementId): Int = list.indexOf(id)
+
     /** Adds a list element at the end */
     def add(value: A): ListElementId = this.synchronized {
       val id = uuid
@@ -551,10 +557,30 @@ object common {
     }
 
     /** Executes given code when future is successful */
-    def whenFailed(code: Throwable => Unit)(implicit ec: ExecutionContext): Future[A] = {
+    def whenFailed(code: PartialFunction[Throwable, Unit])(implicit ec: ExecutionContext): Future[A] = {
       future.onComplete {
         case Success(_) => // ignore
-        case Failure(NonFatal(error)) => code.apply(error)
+        case Failure(NonFatal(error)) =>
+          if (code.isDefinedAt(error)) code.lift(error)
+      }
+      future
+    }
+
+    /** Remaps the failure with a given code */
+    def mapFailure(code: PartialFunction[Throwable, Throwable])(implicit ec: ExecutionContext): Future[A] = {
+      future.transform {
+        case Failure(NonFatal(error)) if code.isDefinedAt(error) => Failure(code.apply(error))
+        case result => result
+      }
+    }
+
+    /** Writes the future result into transition when it's ready */
+    def transition(transition: TransitionData[A])(implicit ec: ExecutionContext): Future[A] = {
+      transition.loading
+      future.whenSuccessful(v => transition.loaded(v))
+      future.whenFailed {
+        case TransitionException(code, reason) => transition.failed(code, reason)
+        case other => transition.failed("unknown", other.getMessage)
       }
       future
     }
@@ -569,6 +595,9 @@ object common {
         others <- tail.oneByOne
       } yield value :: others
     }
+
+    /** Executes futures in parallel */
+    def flip(implicit ec: ExecutionContext): Future[List[A]] = Future.sequence(futures)
   }
 
   implicit class AnyListOps[A](val list: List[A]) extends AnyVal {
@@ -925,11 +954,7 @@ object common {
     val PureBlack: Color = hex("#000000")
     val PureWhite: Color = hex("#ffffff")
     /** Material design colors */
-    val Blue100: Color = hex("#bbdefb")
-    val Blue700: Color = hex("#1976d2")
-    val Red500: Color = hex("#f44336")
-    val Grey300: Color = hex("#e0e0e0")
-    val Grey600: Color = hex("#757575")
+    val Grey200: Color = hex("#eeeeee")
   }
 
   implicit class ColorOps(val color: Color) extends AnyVal {
@@ -979,11 +1004,14 @@ object common {
     }
 
     /** Describes value that failed to load */
-    case class Failed[A](start: Long, end: Long, reason: String) extends Transition[A] {
+    case class Failed[A](start: Long, end: Long, code: String, reason: String) extends Transition[A] {
       override def valueOpt: Option[A] = None
 
       override def hasFailed: Boolean = true
     }
+
+    /** Exception that is expected for transition data */
+    case class TransitionException(code: String, reason: String) extends RuntimeException
 
   }
 
@@ -1019,16 +1047,16 @@ object common {
     }
 
     /** Puts transition into failed state */
-    def failed(reason: String): TransitionData[A] = {
+    def failed(code: String, reason: String): TransitionData[A] = {
       transition() match {
         case Missing() =>
-          transition.write(Failed(currentTimeMillis, currentTimeMillis, reason))
+          transition.write(Failed(currentTimeMillis, currentTimeMillis, code, reason))
         case Loading(start) =>
-          transition.write(Failed(start, currentTimeMillis, reason))
+          transition.write(Failed(start, currentTimeMillis, code, reason))
         case loaded: Loaded[A] =>
-          transition.write(Failed(currentTimeMillis, currentTimeMillis, reason))
+          transition.write(Failed(currentTimeMillis, currentTimeMillis, code, reason))
         case failed: Failed[A] =>
-          transition.write(Failed(currentTimeMillis, currentTimeMillis, reason))
+          transition.write(Failed(currentTimeMillis, currentTimeMillis, code, reason))
       }
       transition
     }
@@ -1058,7 +1086,7 @@ object common {
     /** Executes the code when transition fails to load */
     def whenFailed(code: String => Unit): TransitionData[A] = {
       transition /> {
-        case Failed(start, end, reason) => code.apply(reason)
+        case Failed(start, end, errorCode, reason) => code.apply(reason)
       }
       transition
     }

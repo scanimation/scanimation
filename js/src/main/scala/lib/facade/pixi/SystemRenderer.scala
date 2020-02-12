@@ -12,6 +12,8 @@ class SystemRenderer extends js.Object {
 
   var view: HTMLCanvasElement = js.native
 
+  var screen: Rectangle = js.native
+
   var backgroundColor: Double = js.native
 
   val plugins: RendererPlugins = js.native

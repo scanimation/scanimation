@@ -1,16 +1,21 @@
 package scanimation.pages
 
+import lib.facade.pixi.{Application, GlobalLoader, Sprite}
 import lib.filedrop._
+import lib.pixi._
 import org.querki.jquery._
 import org.scalajs.dom.raw.{Event, FileReader, HTMLImageElement, HTMLInputElement}
+import scanimation.common.Transition.{Failed, Loaded, Loading, Missing}
 import scanimation.common._
 import scanimation.mvc._
 import scanimation.ops._
 import scanimation.pages.pages.PageLogic
 import scanimation.util.global.GlobalContext
 import scanimation.util.logging.Logging
+import scanimation.util.timer.Timer
 
 import scala.concurrent.{Future, Promise}
+import scala.scalajs.js.Dynamic
 
 /** Dragons page layout */
 object BuilderLogic extends PageLogic[BuilderPage] with Logging with GlobalContext {
@@ -21,8 +26,10 @@ object BuilderLogic extends PageLogic[BuilderPage] with Logging with GlobalConte
   /** Returns the parent box for the page layout when page opens */
   override def open(controller: Controller): Unit = {
     bindOverlays()
+    bindPreview(controller)
     bindFrames(controller)
     bindSettings(controller)
+    bindScanimate(controller)
     loading.hidden()
   }
 
@@ -39,49 +46,63 @@ object BuilderLogic extends PageLogic[BuilderPage] with Logging with GlobalConte
 
   private lazy val framesDropzone = $("#frames-dropzone")
   private lazy val framesList = $("#frames-list")
+  private lazy val frameItemTemplate = framesList.find(".row").detach()
   private lazy val framesAdd = $("#frames-add")
   private lazy val framesClear = $("#frames-clear")
   private lazy val framesClearOverlay = $("#frames-clear-overlay")
   private lazy val framesClearYes = $("#frames-clear-yes")
   private lazy val framesShow = $("#frames-show")
   private lazy val framesInput = $("#frames-input")
+  private lazy val framesErrorsOverlay = $("#frames-errors-overlay")
+  private lazy val framesErrorsName = $("#frames-errors-name")
+  private lazy val framesErrorsCode = $("#frames-errors-code")
+  private lazy val framesErrorsDescription = $("#frames-errors-description")
+  private lazy val framesErrorsYes = $("#frames-errors-yes")
 
   /** Binds the frames section logic */
   def bindFrames(controller: Controller): Unit = {
-    /** Describes a frame file */
-    case class FrameFileAsync(name: String, tpe: String, content: Future[Option[String]])
-
-    /** Processes the list of uploaded frame files */
-    def readImages(controller: Controller, files: List[FrameFileAsync]): Unit = {
-      for {
+    /** Loads the frame content and calculates the size */
+    def readFrame(name: String, tpe: String, contentFuture: Future[String]): Frame = {
+      val transition: TransitionData[FrameData] = Data(Missing())
+      val future = for {
         _ <- UnitFuture
-        (filtered, nonImages) = files.partition(file => file.tpe.startsWith("image/"))
-        _ = log.info(s"processing [${filtered.size}/${files.size}] images")
-        contents <- Future.sequence(filtered.map(file => file.content))
-        _ = log.info(s"loaded [${contents.size}] images content")
-        framesAndErrors <- Future.sequence(filtered.zip(contents).map { case (file, Some(content)) =>
-          val promise = Promise[Option[Frame]]
-          val image = $("<img>").firstAs[HTMLImageElement]
-          image.onload = { _ =>
-            val width = if (image.naturalWidth > 0) image.naturalWidth else image.width
-            val height = if (image.naturalHeight > 0) image.naturalHeight else image.height
-            promise.success(Some(Frame(
-              name = file.name,
-              size = width xy height,
-              content = content
-            )))
-          }
-          image.addEventListener("error", (e: Event) => promise.success(None))
-          image.src = content
-          promise.future
-        })
-        frames = framesAndErrors.zip(filtered).collect { case (Some(frame), _) => frame }
-        loadingErrors = framesAndErrors.zip(filtered).collect { case (None, original) => LoadingError(original.name) }
-        formatErrors = nonImages.map(file => FormatError(file.name))
-        _ = controller.addFrames(frames, loadingErrors ++ formatErrors)
-      } yield ()
+        _ = log.info(s"checking frame [$name] mime type [$tpe]")
+        _ <- if (tpe.startsWith("image/")) UnitFuture else Future.failed(ErrorCodes.FrameFormatError)
+        _ = log.info(s"loading frame [$name] content")
+        content <- contentFuture
+        _ = log.info(s"calculating frame [$name] size")
+        image <- readImage(content)
+        size = {
+          val width = if (image.naturalWidth > 0) image.naturalWidth else image.width
+          val height = if (image.naturalHeight > 0) image.naturalHeight else image.height
+          width xy height
+        }
+        _ = log.info(s"loading frame [$name] into pixi")
+        texture <- GlobalLoader.loadAsync(name, content).mapFailure { case _ => ErrorCodes.FramePixiError }
+        _ = log.info(s"frame [$name] fully loaded")
+      } yield FrameData(size, content, texture)
+      future.transition(transition)
+      Frame(name, transition)
     }
 
+    /** Converts frame content into an image */
+    def readImage(content: String): Future[HTMLImageElement] = {
+      val promise = Promise[HTMLImageElement]
+      val image = $("<img>").firstAs[HTMLImageElement]
+      image.onload = { _ => promise.success(image) }
+      image.addEventListener("error", (_: Event) => promise.failure(ErrorCodes.FrameSizeError))
+      image.src = content
+      promise.future
+    }
+
+    /** Updates the indexes withing the frame list */
+    def reindexFrameList(): Unit = {
+      controller.model.frames.ids.zipWithIndex.foreach { case (otherId, index) =>
+        otherId.item.find(".index").text(s"${index + 1}.")
+      }
+    }
+
+    implicit val listenerId: ListenerId = ListenerId()
     controller.model.frames.data /> {
       case Nil =>
         framesList.hidden()
@@ -94,13 +115,61 @@ object BuilderLogic extends PageLogic[BuilderPage] with Logging with GlobalConte
         framesClear.enable()
         framesShow.enable()
     }
+    controller.model.frames.onAdd { case (id, frame) =>
+      val item = frameItemTemplate.clone()
+      item.id(id)
+      item.find(".name").text(frame.name)
+      item.find(".remove").click(() => controller.removeFrame(id))
+      item.find(".up").click(() => controller.moveFrameUp(id))
+      item.find(".down").click(() => controller.moveFrameDown(id))
+      item.click(() => {
+        frame.data() match {
+          case Failed(start, end, code, reason) =>
+            framesErrorsName.text(s"Name: ${frame.name}")
+            framesErrorsCode.text(s"Code: $code")
+            framesErrorsDescription.text(s"Reason: $reason")
+            framesErrorsYes.unbind().click(() => {
+              controller.removeFrame(id)
+              framesErrorsOverlay.hidden()
+            })
+            framesErrorsOverlay.visible()
+          case _ => controller.selectFrame(id)
+        }
+      })
+      framesList.append(item)
+      reindexFrameList()
+      frame.data /> { case value =>
+        item.removeClass("loading")
+        item.removeClass("error")
+        item.removeClass("ready")
+        value match {
+          case Loading(start) => item.addClass("loading")
+          case Failed(start, end, code, reason) => item.addClass("error")
+          case Loaded(start, end, v) => item.addClass("ready")
+          case _ =>
+        }
+      }
+    }
+    controller.model.frames.onRemove { case (id, frame) =>
+      id.item.detach()
+      reindexFrameList()
+      frame.data.forget()
+    }
+    controller.model.frames.onOrder { case ids =>
+      ids.foreach { id => id.item.detach().appendTo(framesList) }
+      reindexFrameList()
+    }
+    controller.model.frames.onSelect { case ids =>
+      controller.model.frames.ids.foreach { id => id.item.removeClass("selected") }
+      ids.foreach { id => id.item.addClass("selected") }
+    }
 
     framesDropzone
       .click(() => framesInput.click())
       .filedrop(
         handler = { files =>
-          val frames = files.map(file => FrameFileAsync(file.name, file.`type`, Future.successful(Some(file.data))))
-          readImages(controller, frames)
+          val frames = files.map(file => readFrame(file.name, file.`type`, Future.successful(file.data)))
+          controller.addFrames(frames)
         },
         overClass = "dropping"
       )
@@ -108,14 +177,14 @@ object BuilderLogic extends PageLogic[BuilderPage] with Logging with GlobalConte
     framesInput.change(() => {
       val files = framesInput.firstAs[HTMLInputElement].files.asList
       val frames = files.map { file =>
-        val promise = Promise[Option[String]]
+        val promise = Promise[String]
         val reader = new FileReader()
-        reader.onload = { _ => promise.success(Some(reader.result.toString)) }
-        reader.onerror = { _ => promise.success(None) }
+        reader.onload = { _ => promise.success(reader.result.toString) }
+        reader.onerror = { _ => promise.failure(ErrorCodes.FrameReaderError) }
         reader.readAsDataURL(file)
-        FrameFileAsync(file.name, file.`type`, promise.future)
+        readFrame(file.name, file.`type`, promise.future)
       }
-      readImages(controller, frames)
+      controller.addFrames(frames)
     })
     framesClear.click(() => {
       framesClearOverlay.visible()
@@ -174,6 +243,77 @@ object BuilderLogic extends PageLogic[BuilderPage] with Logging with GlobalConte
       controller.resetSettings()
       settingsResetOverlay.hidden()
     })
+  }
+
+  private lazy val scanimate = $("#scanimate")
+  private lazy val scanimating = $("#scanimating")
+  private lazy val scanimationErrorsOverlay = $("#scanimation-errors-overlay")
+  private lazy val scanimationErrorsCode = $("#scanimation-errors-code")
+  private lazy val scanimationErrorsDescription = $("#scanimation-errors-description")
+  private lazy val resultsSection = $("#results-section")
+  private lazy val scanimationReset = $("#scanimation-reset")
+
+  /** Binds the scanimate section logic */
+  def bindScanimate(controller: Controller): Unit = {
+    controller.model.canScanimate /> { case value => scanimate.enable(value) }
+    (controller.model.scanimation && controller.model.canScanimate) /> {
+      case (Missing(), false) =>
+        scanimate.visible().disable()
+        scanimating.hidden()
+        resultsSection.hidden()
+      case (Missing(), true) =>
+        scanimate.visible().enable()
+        scanimating.hidden()
+        resultsSection.hidden()
+      case (Loading(start), _) =>
+        scanimate.hidden()
+        scanimating.visible()
+        resultsSection.hidden()
+      case (Failed(start, end, code, reason), _) =>
+        scanimationErrorsCode.text(s"Code: $code")
+        scanimationErrorsDescription.text(s"Reason: $reason")
+        scanimationErrorsOverlay.visible()
+        controller.clearScanimation()
+      case (Loaded(start, end, result), _) =>
+        scanimate.hidden()
+        scanimating.hidden()
+        resultsSection.visible()
+    }
+    scanimate.click(() => controller.scanimate())
+    scanimationReset.click(() => controller.clearScanimation())
+  }
+
+  private lazy val previewWrapper = $("#preview-wrapper")
+
+  /** Binds the preview section logic */
+  def bindPreview(controller: Controller): Unit = {
+    val preview = new Application(Dynamic.literal(
+      width = 1,
+      height = 1,
+      antialias = true,
+      transparent = false,
+      resolution = 1
+    ))
+    val previewCanvas = $(preview.renderer.view)
+    previewCanvas.attr("id", "preview")
+    preview.renderer.backgroundColor = Colors.Grey200.toDouble
+    preview.renderer.autoResize = true
+    previewWrapper.append($(preview.view))
+
+    val previewSize: Writeable[Vec2d] = LazyData(0.0 xy 0.0)
+    Timer.schedule(20, () => previewSize.write(previewWrapper.width() xy previewWrapper.height()))
+    previewSize /> { case size => preview.renderer.resize(size.x, size.y) }
+
+    controller.model.frames.onSelect { case ids =>
+      ids.headOption.flatMap(id => controller.model.frames.read(id)).foreach { frame =>
+        frame.data.read match {
+          case Loaded(start, end, FrameData(size, content, texture)) =>
+            val sprite = new Sprite(texture)
+            preview.stage.addChild(sprite)
+          case _ => // ignore
+        }
+      }
+    }
   }
 
 }

@@ -1,7 +1,8 @@
 package scanimation
 
+import lib.facade.pixi.BaseTexture
 import org.scalajs.dom
-import scanimation.common.Transition.Missing
+import scanimation.common.Transition.{Loaded, Missing, TransitionException}
 import scanimation.common._
 import scanimation.conf.ScanimationConfig
 import scanimation.model.Note
@@ -37,19 +38,28 @@ object mvc {
       }
       _ = bindFrames()
       _ = bindSettings()
+      _ = bindScanimate()
+      _ = bindLogging()
       _ = log.info("bound")
     } yield ()
+
+    /** Binds the model value loggers */
+    def bindLogging(): Unit = {
+      model.canScanimate /> { case value => log.info(s"can scanimate [$value]") }
+    }
 
     /** Binds the frame list listeners */
     def bindFrames(): Unit = {
       implicit val framesListenerId: ListenerId = ListenerId()
-      model.frames.onAdd { case (id, frame) =>
-      }
       model.frames.onRemove { case (id, frame) =>
+        frame.data.forget()
       }
       model.frames.data /> {
-        case head :: xs =>
-          model.imageSize.write(Some(head.size))
+        case head :: tail =>
+          tail.foreach(frame => frame.data.forget())
+          head.data.transition /> {
+            case Loaded(start, end, data) => model.imageSize.write(Some(data.size))
+          }
         case Nil =>
           model.imageSize.write(None)
       }
@@ -71,20 +81,49 @@ object mvc {
       }
     }
 
+    /** Binds the scanimation logic */
+    def bindScanimate(): Unit = {
+      (model.frameCount && model.imageSize && model.frameWidth && model.frameOverlap) /> {
+        case (((Some(count), Some(size)), Some(width)), Some(overlap)) =>
+          model.canScanimate.write(true)
+        case _ =>
+          model.canScanimate.write(false)
+      }
+    }
+
     /** Redirect to given page within scanimation */
     def showPage(page: Page): Unit = {
       model.page.write(page)
     }
 
     /** Opens up files upload dialogue to add frame images */
-    def addFrames(frames: List[Frame], errors: List[ImportError]): Unit = {
+    def addFrames(frames: List[Frame]): Unit = {
       log.info("adding frames")
-      if (frames.nonEmpty) {
-        val size = frames.head.size
-        model.frames.addList(frames.filter(frame => frame.size == size).sortBy(frame => frame.name))
-        val allErrors = errors ++ frames.filter(frame => frame.size != size).map(frame => SizeError(frame.name, size))
-        model.framesImportErrors.write(allErrors.sortBy(error => error.name))
-      }
+      model.frames.addList(frames.sortBy(frame => frame.name))
+    }
+
+    /** Deselects all frames and select the frame with given id */
+    def selectFrame(id: String): Unit = {
+      log.info(s"selecting frame [$id]")
+      model.frames.select(id)
+    }
+
+    /** Shifts the position of the frame up */
+    def moveFrameUp(id: String): Unit = {
+      log.info(s"moving frame [$id] up")
+      model.frames.moveUp(id)
+    }
+
+    /** Shifts the position of the frame down */
+    def moveFrameDown(id: String): Unit = {
+      log.info(s"moving frame [$id] down")
+      model.frames.moveDown(id)
+    }
+
+    /** Removes the given frame */
+    def removeFrame(id: ListElementId): Unit = {
+      log.info(s"removing frame [$id]")
+      model.frames.remove(id)
     }
 
     /** Removes all of the frames from frames list */
@@ -148,6 +187,18 @@ object mvc {
     def exportGrid(): Unit = {
       log.info("exporting scanimation grid")
     }
+
+    /** Runs the scanimation algo */
+    def scanimate(): Unit = {
+      log.info("scanimating")
+      model.scanimation.loaded(CompleteScanimation("foo", "bar"))
+    }
+
+    /** Clears the previous scanimation results */
+    def clearScanimation(): Unit = {
+      log.info("clearing the scanimation results")
+      model.scanimation.reset
+    }
   }
 
   /** Default values for scanimation settings */
@@ -159,63 +210,57 @@ object mvc {
 
   /** Defines model with common fields
     *
-    * @param tick               the current update tick
-    * @param frame              the current rendering frame
-    * @param page               currently displayed scanimation page
-    * @param frames             a list of frame images uploaded by the user
-    * @param framesImportErrors a list of errors that occurred during last frame import
-    * @param imageSize          the image resolution of the first loaded frame
-    * @param frameCount         the number of scanimation frames after overlap
-    * @param frameWidth         the width of the gap between grid lines in pixels
-    * @param frameOverlap       the number of animation frames put into single scanimation frame
-    * @param direction          the direction of scanimation grid movement
-    * @param defaultSettings    true if all of the settings are set to default values
-    * @param scanimation        the scanimation computing results
+    * @param tick            the current update tick
+    * @param frame           the current rendering frame
+    * @param page            currently displayed scanimation page
+    * @param frames          a list of frame images uploaded by the user
+    * @param imageSize       the image resolution of the first loaded frame
+    * @param frameCount      the number of scanimation frames after overlap
+    * @param frameWidth      the width of the gap between grid lines in pixels
+    * @param frameOverlap    the number of animation frames put into single scanimation frame
+    * @param direction       the direction of scanimation grid movement
+    * @param defaultSettings true if all of the settings are set to default values
+    * @param canScanimate    true if the app is ready to run the scanimation
+    * @param scanimation     the scanimation computing results
     */
   case class Model(tick: Writeable[Long] = Data(0),
                    frame: Writeable[Long] = Data(0),
                    page: Writeable[Page] = LazyData(router.parsePage),
 
                    frames: ListData[Frame] = ListData(),
-                   framesImportErrors: Writeable[List[ImportError]] = LazyData(Nil),
                    imageSize: Writeable[Option[Vec2i]] = Data(None),
                    frameCount: Writeable[Option[Int]] = Data(None),
                    frameWidth: Writeable[Option[Int]] = Data(Some(Default.frameWidth)),
                    frameOverlap: Writeable[Option[Int]] = Data(Some(Default.frameOverlap)),
                    direction: Writeable[Directions.Value] = Data(Default.direction),
                    defaultSettings: Writeable[Boolean] = LazyData(true),
+                   canScanimate: Writeable[Boolean] = LazyData(false),
                    scanimation: TransitionData[CompleteScanimation] = Data(Missing()))
 
   /** Defines the single animation frame
     *
-    * @param name    the name of the imported file
-    * @param size    the size of the imported image
-    * @param content the image content
+    * @param name the name of the imported file
+    * @param data the frame contents
     */
-  case class Frame(name: String, size: Vec2i, content: String)
+  case class Frame(name: String, data: TransitionData[FrameData])
 
-  /** Represents an error that occurred during frame import */
-  trait ImportError {
-    /** Imported file name */
-    def name: String
+  /** Defines frame contents
+    *
+    * @param size    the size of the imported frame
+    * @param content the read contents of the frame image
+    * @param texture the loaded pixi texture
+    */
+  case class FrameData(size: Vec2i, content: String, texture: BaseTexture)
 
-    /** Human readable message for this error */
-    def asString: String
-  }
+  /** Contains builders for error codes */
+  object ErrorCodes {
+    def FrameReaderError: TransitionException = TransitionException("0000", "failed to read file")
 
-  /** Frame image format/extension error */
-  case class FormatError(name: String) extends ImportError {
-    override def asString: String = "unsupported file format"
-  }
+    def FrameFormatError: TransitionException = TransitionException("0001", "failed to recognize file format")
 
-  /** Frame image data loading error */
-  case class LoadingError(name: String) extends ImportError {
-    override def asString: String = "failed to load file"
-  }
+    def FrameSizeError: TransitionException = TransitionException("0002", "failed to read frame size")
 
-  /** Frame image size error */
-  case class SizeError(name: String, expected: Vec2i) extends ImportError {
-    override def asString: String = s"did not match first frame size: ${expected.x} x ${expected.y}"
+    def FramePixiError: TransitionException = TransitionException("0003", "failed to import frame as a texture")
   }
 
   /** Contains scanimation processing results

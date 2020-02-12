@@ -1,8 +1,14 @@
 package lib
 
-import lib.facade.pixi.Graphics
-import scanimation.common.{Color, Colors, Vec2d}
+import lib.facade.pixi.{BaseTexture, Graphics, Loader, Texture}
+import org.scalajs.dom.raw.HTMLImageElement
+import scanimation.common._
 import scanimation.util.logging.Logging
+
+import scala.concurrent.{ExecutionContext, Future, Promise}
+import scala.scalajs.js.|
+import scala.util.Try
+import scala.util.control.NonFatal
 
 /** The HTML5 Creation Engine
   * https://www.pixijs.com/ */
@@ -25,6 +31,41 @@ object pixi extends Logging {
   //    box.registerCanvas(canvas)
   //    app
   //  }
+
+  /** Sync object for loading assets */
+  private val loaderSync = new Object()
+  /** Contains a map of mutexes per loader to allow fake async loading logic */
+  private var loaderMutex: Map[Loader, Future[Unit]] = Map()
+
+  implicit class LoaderOps(val loader: Loader) extends AnyVal {
+    /** Loads the given asset asynchronously */
+    def loadAsync(name: String, asset: String | HTMLImageElement)(implicit ec: ExecutionContext): Future[BaseTexture] = loaderSync.synchronized {
+      val promise = Promise[BaseTexture]()
+      val mutex = loaderMutex.getOrElse(loader, UnitFuture)
+      mutex.onComplete { _ =>
+        try {
+          log.info(s"loading asset [$name]")
+          loader
+            .reset()
+            .add(asset)
+            .load(() => {
+              log.info(s"successfully loaded asset [$name]")
+              promise.success(Texture.from(asset))
+            })
+          loader.onError.add(() => {
+            log.warn(s"failed to load asset [$name]")
+            promise.failure(new IllegalStateException(s"failed to load asset [$name]"))
+          })
+        } catch {
+          case NonFatal(up) =>
+            log.error(s"failed to load asset [$name]", up)
+            promise.failure(new IllegalStateException(s"failed to load asset [$name]"))
+        }
+      }
+      loaderMutex = loaderMutex + (loader -> promise.future.clear)
+      promise.future
+    }
+  }
 
   implicit class GraphicsOps(val graphics: Graphics) extends AnyVal {
     /** Draws a rectangle with given size */

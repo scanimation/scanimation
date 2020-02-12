@@ -46,7 +46,7 @@ object launcher extends App with LazyLogging {
   val (host, port) = (generalConfig.host, generalConfig.port)
   val binding = Http()
     .bindAndHandle(route, host, port)
-    .whenFailed { up =>
+    .whenFailed { case up =>
       logger.error(s"failed to bind the server to [$host:$port]", up)
       stop()
     }

@@ -18,6 +18,13 @@ object timer {
     }
   }
 
+  object Timer {
+    /** Schedules a new timer that executes given code with given tps */
+    def schedule(tps: Double, code: () => Unit): Unit = {
+      new Timer().start(tps, code)
+    }
+  }
+
   class Animator {
     /** Starts the timer to call the code on each animation frame */
     def start(code: () => Unit): Unit = {

@@ -6,6 +6,7 @@
   > div {
     .hbox();
     align-items: center;
+    cursor: pointer;
     height: @frameListItem;
     background-color: white;
     border-width: 2px 0 0 0;
@@ -14,8 +15,11 @@
     transition-duration: 100ms;
 
     &:hover {
-      cursor: pointer;
       background-color: @grey200;
+
+      &.error {
+        background-color: @red100;
+      }
     }
 
     &:active {
@@ -23,6 +27,7 @@
     }
 
     &.selected {
+      cursor: auto;
       background-color: @grey200;
 
       &:active {
@@ -31,10 +36,10 @@
     }
 
     &.selected > button {
-      display: block;
+      .cbox();
     }
 
-    span {
+    > span, > i {
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -42,8 +47,12 @@
       margin: 0 0 0 @padMedium;
       .disable-select();
 
-      &.index {
+      &.index, &.loading {
         color: @grey600;
+      }
+
+      &.loading {
+        font-size: @textSmall;
       }
     }
 
@@ -62,6 +71,32 @@
       i {
         color: black;
         font-size: @textLarge;
+      }
+    }
+
+    > .loading {
+      display: none;
+    }
+
+    &.loading > .loading {
+      display: initial;
+    }
+
+    > .index {
+      display: none;
+    }
+
+    &.ready > .index, &.error > .index {
+      display: initial;
+    }
+
+    > .error {
+      display: none;
+    }
+
+    &.error {
+      > span {
+        color: @red500;
       }
     }
   }

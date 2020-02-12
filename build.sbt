@@ -196,6 +196,7 @@ lessJS := {
   execute(
     """cd ./out""",
     """npm install --global less""",
+    """npm install --global tslib""",
     """lessc styles.less styles.css"""
   )
 }

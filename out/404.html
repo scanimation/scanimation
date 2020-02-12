@@ -23,6 +23,24 @@
     </div>
 </div>
 
+<div id="frames-errors-overlay" class="overlay overlay-close">
+    <div>
+        <div class="overlay-header">
+            <span class="overlay-title">Failed to import frame</span>
+            <button class="overlay-close"><i class="material-icons">close</i></button>
+        </div>
+        <div class="overlay-content">
+            <p id="frames-errors-name">Name: frame000.png</p>
+            <p id="frames-errors-code">Code: 0001</p>
+            <p id="frames-errors-description">Reason: wrong image format</p>
+        </div>
+        <div class="overlay-controls">
+            <button class="overlay-close"><span>CLOSE</span></button>
+            <button id="frames-errors-yes"><span>REMOVE</span></button>
+        </div>
+    </div>
+</div>
+
 <div id="settings-reset-overlay" class="overlay overlay-close">
     <div>
         <div class="overlay-header">
@@ -37,13 +55,16 @@
     </div>
 </div>
 
-<div id="frames-errors-overlay" class="overlay overlay-close">
+<div id="scanimation-errors-overlay" class="overlay overlay-close">
     <div>
         <div class="overlay-header">
-            <span class="overlay-title">Failed to import frames</span>
+            <span class="overlay-title">Failed to scanimate</span>
             <button class="overlay-close"><i class="material-icons">close</i></button>
         </div>
-        <div class="overlay-content"><p>Next frames failed to import:</p></div>
+        <div class="overlay-content">
+            <p id="scanimation-errors-code">Code: 0001</p>
+            <p id="scanimation-errors-description">Reason: wrong image format</p>
+        </div>
         <div class="overlay-controls">
             <button class="overlay-close"><span>CLOSE</span></button>
         </div>
@@ -64,7 +85,7 @@
             <div>
                 <span>Preview</span>
             </div>
-            <canvas id="preview"></canvas>
+            <div id="preview-wrapper"></div>
         </div>
     </div>
     <div class="menu">
@@ -81,6 +102,7 @@
             <div id="frames-list">
                 <div class="row">
                     <span class="index">1</span>
+                    <i class="loading material-icons">hourglass_empty</i>
                     <span class="name fill">frame-001.png</span>
                     <button class="up" title="Move frame up"><i class="material-icons">arrow_upward</i></button>
                     <button class="down" title="Move frame down"><i class="material-icons">arrow_downward</i></button>
@@ -137,6 +159,7 @@
             </div>
         </div>
         <button id="scanimate" class="primary" title="Calculate scanimation"><span>SCANIMATE</span></button>
+        <button id="scanimating" class="primary" disabled title="Scanimating"><span>SCANIMATING...</span></button>
         <div id="results-section">
             <button id="scanimation-play" class="round" title="Play scanimation in preview"><i class="material-icons">play_arrow</i></button>
             <button id="scanimation-reset" class="round" title="Reset scanimation"><i class="material-icons">delete</i></button>
@@ -151,7 +174,6 @@
 <script type="text/javascript" src="/lib/jquery-2.1.3.min.js"></script>
 <script type="text/javascript" src="/lib/jQuery.FileDrop.min.js"></script>
 <script type="text/javascript" src="/lib/pixi.min.js"></script>
-<script type="text/javascript" src="/lib/pixi-filters.js"></script>
 <script type="text/javascript" src="/lib/URI.js"></script>
 <script type="text/javascript" src="/lib/dropzone.js"></script>
 <script type="text/javascript" src="/bundle.js"></script>
