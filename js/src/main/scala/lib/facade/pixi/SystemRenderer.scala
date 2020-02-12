@@ -18,5 +18,7 @@ class SystemRenderer extends js.Object {
 
   val plugins: RendererPlugins = js.native
 
+  val extract: Extract = js.native
+
   def resize(width: Double, height: Double): Unit = js.native
 }

@@ -4,7 +4,7 @@ import lib.facade.pixi.{Application, GlobalLoader, Sprite}
 import lib.filedrop._
 import lib.pixi._
 import org.querki.jquery._
-import org.scalajs.dom.raw.{Event, FileReader, HTMLImageElement, HTMLInputElement}
+import org.scalajs.dom.raw.{Event, FileReader, HTMLImageElement, HTMLInputElement, URL}
 import scanimation.common.Transition.{Failed, Loaded, Loading, Missing}
 import scanimation.common._
 import scanimation.mvc._
@@ -252,6 +252,7 @@ object BuilderLogic extends PageLogic[BuilderPage] with Logging with GlobalConte
   private lazy val scanimationErrorsDescription = $("#scanimation-errors-description")
   private lazy val resultsSection = $("#results-section")
   private lazy val scanimationReset = $("#scanimation-reset")
+  private lazy val scanimationImage = $("#scanimation-image")
 
   /** Binds the scanimate section logic */
   def bindScanimate(controller: Controller): Unit = {
@@ -304,16 +305,44 @@ object BuilderLogic extends PageLogic[BuilderPage] with Logging with GlobalConte
     Timer.schedule(20, () => previewSize.write(previewWrapper.width() xy previewWrapper.height()))
     previewSize /> { case size => preview.renderer.resize(size.x, size.y) }
 
+    val selectedFrame: Writeable[Option[FrameData]] = LazyData(None)
     controller.model.frames.onSelect { case ids =>
-      ids.headOption.flatMap(id => controller.model.frames.read(id)).foreach { frame =>
-        frame.data.read match {
-          case Loaded(start, end, FrameData(size, content, texture)) =>
-            val sprite = new Sprite(texture)
-            preview.stage.addChild(sprite)
-          case _ => // ignore
-        }
-      }
+      selectedFrame.write(
+        ids
+          .headOption
+          .flatMap(id => controller.model.frames.read(id))
+          .flatMap { frame =>
+            frame.data.read match {
+              case Loaded(start, end, data@FrameData(size, content, texture)) => Some(data)
+              case _ => None
+            }
+          }
+      )
     }
+
+    val root = preview.stage.sub
+    val frameSprite = new Sprite().anchorAtCenter.addTo(root)
+    val scanimationContainer = root.sub
+    val scanimationSprite = new Sprite().anchorAtCenter.addTo(scanimationContainer).scaleTo(0.5)
+    selectedFrame /> {
+      case Some(FrameData(size, content, texture)) =>
+        frameSprite.texture = texture
+        frameSprite.visible = true
+        scanimationSprite.texture = texture
+      case None =>
+        frameSprite.visible = false
+    }
+
+    (previewSize && selectedFrame) /> {
+      case (size, Some(frame)) =>
+        val scale = (size / frame.size).min min 1
+        frameSprite.scaleTo(scale)
+        frameSprite.positionAt(size / 2)
+    }
+
+    scanimationImage.click(() => {
+      preview.renderer.extract.canvas(scanimationContainer).toBlob(blob => blob.download("scanimation.png"), "image/png")
+    })
   }
 
 }

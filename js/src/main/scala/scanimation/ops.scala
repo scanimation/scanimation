@@ -5,7 +5,7 @@ import java.util.UUID
 import lib.facade.pixi._
 import org.querki.jquery._
 import org.scalajs.dom
-import org.scalajs.dom.raw.DOMList
+import org.scalajs.dom.raw.{Blob, DOMList, URL}
 import scanimation.common._
 import scanimation.util.animation
 import scanimation.util.animation.{Animation, ChaseInOut, Delay, FadeIn, FadeOut, FlipIn, FlipOut, OffsetIn, OffsetOut, Parallel}
@@ -281,6 +281,18 @@ object ops extends GlobalContext with Logging {
   implicit class ListElementIdOps(val id: ListElementId) extends AnyVal {
     /** Selects all elements with data id equal to give string */
     def item: JQuery = $(s"""[data-id="$id"]""")
+  }
+
+  implicit class BlobOps(val blob: Blob) extends AnyVal {
+    /** Downloads given blob as an image */
+    def download(name: String): Unit = {
+      $("<a>")
+        .appendTo($("body"))
+        .attr("download", name)
+        .attr("href", URL.createObjectURL(blob))
+        .mutate(a => a(0).click())
+        .detach()
+    }
   }
 
 }
