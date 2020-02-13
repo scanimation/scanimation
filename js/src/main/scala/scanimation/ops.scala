@@ -171,6 +171,11 @@ object ops extends GlobalContext with Logging {
     def chase(source: DisplayObject, target: DisplayObject): ChaseInOut = ChaseInOut(a, source, target)
   }
 
+  implicit class SpriteOps(val a: Sprite) extends AnyVal {
+    /** Changes the texture to given value */
+    def textureTo(texture: BaseTexture): Sprite = a.mutate { a => a.texture = texture }
+  }
+
   implicit class ContainerOps(val a: Container) extends AnyVal {
     /** Builds a new sub-container */
     def sub: Container = new Container().addTo(a)

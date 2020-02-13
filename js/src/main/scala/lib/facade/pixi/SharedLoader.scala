@@ -4,6 +4,6 @@ import scala.scalajs.js
 import scala.scalajs.js.annotation.JSGlobal
 
 @js.native
-@JSGlobal("PIXI.loader")
-object GlobalLoader extends Loader {
+@JSGlobal("PIXI.Loader.shared")
+object SharedLoader extends Loader {
 }

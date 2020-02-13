@@ -1,6 +1,6 @@
 package scanimation.pages
 
-import lib.facade.pixi.{Application, GlobalLoader, Sprite}
+import lib.facade.pixi.{Application, SharedLoader, Sprite}
 import lib.filedrop._
 import lib.pixi._
 import org.querki.jquery._
@@ -78,7 +78,7 @@ object BuilderLogic extends PageLogic[BuilderPage] with Logging with GlobalConte
           width xy height
         }
         _ = log.info(s"loading frame [$name] into pixi")
-        texture <- GlobalLoader.loadAsync(name, content).mapFailure { case _ => ErrorCodes.FramePixiError }
+        texture <- SharedLoader.loadAsync(name, content).mapFailure { case _ => ErrorCodes.FramePixiError }
         _ = log.info(s"frame [$name] fully loaded")
       } yield FrameData(size, content, texture)
       future.transition(transition)
@@ -324,13 +324,13 @@ object BuilderLogic extends PageLogic[BuilderPage] with Logging with GlobalConte
     val frameSprite = new Sprite().anchorAtCenter.addTo(root)
     val scanimationContainer = root.sub
     val scanimationSprite = new Sprite().anchorAtCenter.addTo(scanimationContainer).scaleTo(0.5)
+    scanimationSprite.visibleTo(false)
     selectedFrame /> {
       case Some(FrameData(size, content, texture)) =>
-        frameSprite.texture = texture
-        frameSprite.visible = true
-        scanimationSprite.texture = texture
+        frameSprite.textureTo(texture).visibleTo(true)
+        scanimationSprite.textureTo(texture)
       case None =>
-        frameSprite.visible = false
+        frameSprite.visibleTo(false)
     }
 
     (previewSize && selectedFrame) /> {
