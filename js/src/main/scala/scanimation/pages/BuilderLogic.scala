@@ -53,6 +53,7 @@ object BuilderLogic extends PageLogic[BuilderPage] with Logging with GlobalConte
   private lazy val framesClearYes = $("#frames-clear-yes")
   private lazy val framesShow = $("#frames-show")
   private lazy val framesInput = $("#frames-input")
+  private lazy val framesLoadingOverlay = $("#frames-loading-overlay")
   private lazy val framesErrorsOverlay = $("#frames-errors-overlay")
   private lazy val framesErrorsName = $("#frames-errors-name")
   private lazy val framesErrorsCode = $("#frames-errors-code")
@@ -193,6 +194,8 @@ object BuilderLogic extends PageLogic[BuilderPage] with Logging with GlobalConte
       controller.clearFrames()
       framesClearOverlay.hidden()
     })
+
+    framesLoadingOverlay.visible()
   }
 
   private lazy val settingsDirection = $("#settings-direction")

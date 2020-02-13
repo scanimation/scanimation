@@ -1,0 +1,60 @@
+#frames-loading-overlay {
+  > div {
+    flex: 0 0 40rem;
+  }
+
+  #frames-loading-list {
+    .row {
+      .hbox();
+      height: 2rem;
+
+      i {
+        flex: 0 0 2rem;
+      }
+
+      .name-wrapper {
+        flex: 0 0 15rem;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .name {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .description {
+        margin: 0 0 0 1rem;
+      }
+
+      .loading {
+        display: none;
+        color: @grey500;
+      }
+
+      .success {
+        display: none;
+        color: @green500;
+      }
+
+      .failure {
+        display: none;
+        color: @red500;
+      }
+
+      &.loading > .loading {
+        display: initial;
+      }
+
+      &.success > .success {
+        display: initial;
+      }
+
+      &.failure > .failure {
+        display: initial;
+      }
+    }
+  }
+}

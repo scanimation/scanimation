@@ -16,10 +16,6 @@
 
     &:hover {
       background-color: @grey200;
-
-      &.error {
-        background-color: @red100;
-      }
     }
 
     &:active {
@@ -47,12 +43,8 @@
       margin: 0 0 0 @padMedium;
       .disable-select();
 
-      &.index, &.loading {
+      &.index {
         color: @grey600;
-      }
-
-      &.loading {
-        font-size: @textSmall;
       }
     }
 
@@ -71,32 +63,6 @@
       i {
         color: black;
         font-size: @textLarge;
-      }
-    }
-
-    > .loading {
-      display: none;
-    }
-
-    &.loading > .loading {
-      display: initial;
-    }
-
-    > .index {
-      display: none;
-    }
-
-    &.ready > .index, &.error > .index {
-      display: initial;
-    }
-
-    > .error {
-      display: none;
-    }
-
-    &.error {
-      > span {
-        color: @red500;
       }
     }
   }
