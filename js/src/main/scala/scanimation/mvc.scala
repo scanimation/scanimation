@@ -2,7 +2,7 @@ package scanimation
 
 import lib.facade.pixi.BaseTexture
 import org.scalajs.dom
-import scanimation.common.Transition.{Loaded, Missing, TransitionException}
+import scanimation.common.Transition.{Missing, TransitionException}
 import scanimation.common._
 import scanimation.conf.ScanimationConfig
 import scanimation.model.Note
@@ -50,16 +50,9 @@ object mvc {
 
     /** Binds the frame list listeners */
     def bindFrames(): Unit = {
-      implicit val framesListenerId: ListenerId = ListenerId()
-      model.frames.onRemove { case (id, frame) =>
-        frame.data.forget()
-      }
       model.frames.data /> {
         case head :: tail =>
-          tail.foreach(frame => frame.data.forget())
-          head.data.transition /> {
-            case Loaded(start, end, data) => model.imageSize.write(Some(data.size))
-          }
+          model.imageSize.write(Some(head.size))
         case Nil =>
           model.imageSize.write(None)
       }
@@ -239,18 +232,12 @@ object mvc {
 
   /** Defines the single animation frame
     *
-    * @param name the name of the imported file
-    * @param data the frame contents
-    */
-  case class Frame(name: String, data: TransitionData[FrameData])
-
-  /** Defines frame contents
-    *
+    * @param name    the name of the imported file
     * @param size    the size of the imported frame
     * @param content the read contents of the frame image
     * @param texture the loaded pixi texture
     */
-  case class FrameData(size: Vec2i, content: String, texture: BaseTexture)
+  case class Frame(name: String, size: Vec2i, content: String, texture: BaseTexture)
 
   /** Contains builders for error codes */
   object ErrorCodes {

@@ -1,19 +1,26 @@
 #frames-loading-overlay {
   > div {
-    flex: 0 0 40rem;
+    flex: 0 0 30rem;
   }
 
   #frames-loading-list {
+    max-height: 20rem;
+    overflow-y: scroll;
+    border-radius: @padSmall;
+    .shadow-soft();
+
     .row {
       .hbox();
-      height: 2rem;
+      flex-wrap: wrap;
+      padding: @padSmall;
 
       i {
         flex: 0 0 2rem;
       }
 
       .name-wrapper {
-        flex: 0 0 15rem;
+        flex: 0 0 25rem;
+        max-width: 25rem;
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
@@ -25,8 +32,12 @@
         white-space: nowrap;
       }
 
+      .break {
+        flex-basis: 100%;
+      }
+
       .description {
-        margin: 0 0 0 1rem;
+        margin: 0 0 0 2rem;
       }
 
       .loading {

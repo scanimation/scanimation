@@ -1,11 +1,11 @@
 package scanimation.pages
 
-import lib.facade.pixi.{Application, SharedLoader, Sprite}
+import lib.facade.pixi.{Application, Container, SharedLoader, Sprite}
 import lib.filedrop._
 import lib.pixi._
 import org.querki.jquery._
-import org.scalajs.dom.raw.{Event, FileReader, HTMLImageElement, HTMLInputElement, URL}
-import scanimation.common.Transition.{Failed, Loaded, Loading, Missing}
+import org.scalajs.dom.raw.{Event, FileReader, HTMLImageElement, HTMLInputElement}
+import scanimation.common.Transition._
 import scanimation.common._
 import scanimation.mvc._
 import scanimation.ops._
@@ -26,8 +26,8 @@ object BuilderLogic extends PageLogic[BuilderPage] with Logging with GlobalConte
   /** Returns the parent box for the page layout when page opens */
   override def open(controller: Controller): Unit = {
     bindOverlays()
-    bindPreview(controller)
-    bindFrames(controller)
+    val loadContainer = bindPreview(controller)
+    bindFrames(controller, loadContainer)
     bindSettings(controller)
     bindScanimate(controller)
     loading.hidden()
@@ -46,7 +46,7 @@ object BuilderLogic extends PageLogic[BuilderPage] with Logging with GlobalConte
 
   private lazy val framesDropzone = $("#frames-dropzone")
   private lazy val framesList = $("#frames-list")
-  private lazy val frameItemTemplate = framesList.find(".row").detach()
+  private lazy val framesListItemTemplate = framesList.find(".row").detach()
   private lazy val framesAdd = $("#frames-add")
   private lazy val framesClear = $("#frames-clear")
   private lazy val framesClearOverlay = $("#frames-clear-overlay")
@@ -54,23 +54,51 @@ object BuilderLogic extends PageLogic[BuilderPage] with Logging with GlobalConte
   private lazy val framesShow = $("#frames-show")
   private lazy val framesInput = $("#frames-input")
   private lazy val framesLoadingOverlay = $("#frames-loading-overlay")
-  private lazy val framesErrorsOverlay = $("#frames-errors-overlay")
-  private lazy val framesErrorsName = $("#frames-errors-name")
-  private lazy val framesErrorsCode = $("#frames-errors-code")
-  private lazy val framesErrorsDescription = $("#frames-errors-description")
-  private lazy val framesErrorsYes = $("#frames-errors-yes")
+  private lazy val framesLoadingOverlayClose = framesLoadingOverlay.find(".overlay-close")
+  private lazy val framesLoadingList = $("#frames-loading-list")
+  private lazy val framesLoadingListItemTemplate = framesLoadingList.find(".row").detach()
+
+  /** Describes the frame before it's loaded */
+  case class AsyncFrame(name: String, tpe: String, contentFutureCode: () => Future[String])
 
   /** Binds the frames section logic */
-  def bindFrames(controller: Controller): Unit = {
+  def bindFrames(controller: Controller, pixiContainer: Container): Unit = {
+    /** Loads a list of frames and shows overlay */
+    def readFrames(list: List[AsyncFrame]): Unit = for {
+      _ <- UnitFuture
+      _ = framesLoadingListItemTemplate // forced lazy loading
+      _ = framesLoadingOverlay.visible()
+      _ = framesLoadingOverlayClose.disable()
+      _ = framesLoadingList.children().detach()
+      _ = pixiContainer.removeChildren.visibleTo(true)
+      frames <- Future.sequence(list.map(async => readFrame(async)))
+      _ = framesLoadingOverlayClose
+        .click(() => {
+          controller.addFrames(frames.flatten)
+          framesLoadingOverlayClose.unbind()
+          framesLoadingOverlay.hidden()
+        })
+        .enable()
+      _ = pixiContainer.removeChildren.visibleTo(false)
+    } yield ()
+
     /** Loads the frame content and calculates the size */
-    def readFrame(name: String, tpe: String, contentFuture: Future[String]): Frame = {
-      val transition: TransitionData[FrameData] = Data(Missing())
+    def readFrame(async: AsyncFrame): Future[Option[Frame]] = {
+      val name = async.name
+      val tpe = async.tpe
+      val item = framesLoadingListItemTemplate.clone()
+      val id = uuid
+      item.id(id)
+      item.addClass("loading")
+      item.find(".name").text(name)
+      item.appendTo(framesLoadingList)
+      log.info(s"appended frame loading item [$id], current size [${framesLoadingList.children().length}]")
       val future = for {
         _ <- UnitFuture
         _ = log.info(s"checking frame [$name] mime type [$tpe]")
         _ <- if (tpe.startsWith("image/")) UnitFuture else Future.failed(ErrorCodes.FrameFormatError)
         _ = log.info(s"loading frame [$name] content")
-        content <- contentFuture
+        content <- async.contentFutureCode.apply()
         _ = log.info(s"calculating frame [$name] size")
         image <- readImage(content)
         size = {
@@ -80,10 +108,17 @@ object BuilderLogic extends PageLogic[BuilderPage] with Logging with GlobalConte
         }
         _ = log.info(s"loading frame [$name] into pixi")
         texture <- SharedLoader.loadAsync(name, content).mapFailure { case _ => ErrorCodes.FramePixiError }
+        _ = log.info(s"creating frame [$name] sprite in pixi")
+        _ = new Sprite(texture).addTo(pixiContainer)
         _ = log.info(s"frame [$name] fully loaded")
-      } yield FrameData(size, content, texture)
-      future.transition(transition)
-      Frame(name, transition)
+        _ = item.removeClass("loading").addClass("success")
+      } yield Some(Frame(name, size, content, texture))
+      future.recover {
+        case up: TransitionException =>
+          item.removeClass("loading").addClass("failure")
+          item.find(".description").text(s"code-${up.code}: ${up.reason}")
+          None
+      }
     }
 
     /** Converts frame content into an image */
@@ -117,44 +152,19 @@ object BuilderLogic extends PageLogic[BuilderPage] with Logging with GlobalConte
         framesShow.enable()
     }
     controller.model.frames.onAdd { case (id, frame) =>
-      val item = frameItemTemplate.clone()
+      val item = framesListItemTemplate.clone()
       item.id(id)
       item.find(".name").text(frame.name)
       item.find(".remove").click(() => controller.removeFrame(id))
       item.find(".up").click(() => controller.moveFrameUp(id))
       item.find(".down").click(() => controller.moveFrameDown(id))
-      item.click(() => {
-        frame.data() match {
-          case Failed(start, end, code, reason) =>
-            framesErrorsName.text(s"Name: ${frame.name}")
-            framesErrorsCode.text(s"Code: $code")
-            framesErrorsDescription.text(s"Reason: $reason")
-            framesErrorsYes.unbind().click(() => {
-              controller.removeFrame(id)
-              framesErrorsOverlay.hidden()
-            })
-            framesErrorsOverlay.visible()
-          case _ => controller.selectFrame(id)
-        }
-      })
+      item.click(() => controller.selectFrame(id))
       framesList.append(item)
       reindexFrameList()
-      frame.data /> { case value =>
-        item.removeClass("loading")
-        item.removeClass("error")
-        item.removeClass("ready")
-        value match {
-          case Loading(start) => item.addClass("loading")
-          case Failed(start, end, code, reason) => item.addClass("error")
-          case Loaded(start, end, v) => item.addClass("ready")
-          case _ =>
-        }
-      }
     }
     controller.model.frames.onRemove { case (id, frame) =>
       id.item.detach()
       reindexFrameList()
-      frame.data.forget()
     }
     controller.model.frames.onOrder { case ids =>
       ids.foreach { id => id.item.detach().appendTo(framesList) }
@@ -169,8 +179,8 @@ object BuilderLogic extends PageLogic[BuilderPage] with Logging with GlobalConte
       .click(() => framesInput.click())
       .filedrop(
         handler = { files =>
-          val frames = files.map(file => readFrame(file.name, file.`type`, Future.successful(file.data)))
-          controller.addFrames(frames)
+          val frames = files.map { file => AsyncFrame(file.name, file.`type`, () => Future.successful(file.data)) }
+          readFrames(frames)
         },
         overClass = "dropping"
       )
@@ -178,14 +188,16 @@ object BuilderLogic extends PageLogic[BuilderPage] with Logging with GlobalConte
     framesInput.change(() => {
       val files = framesInput.firstAs[HTMLInputElement].files.asList
       val frames = files.map { file =>
-        val promise = Promise[String]
-        val reader = new FileReader()
-        reader.onload = { _ => promise.success(reader.result.toString) }
-        reader.onerror = { _ => promise.failure(ErrorCodes.FrameReaderError) }
-        reader.readAsDataURL(file)
-        readFrame(file.name, file.`type`, promise.future)
+        AsyncFrame(file.name, file.`type`, () => {
+          val promise = Promise[String]
+          val reader = new FileReader()
+          reader.onload = { _ => promise.success(reader.result.toString) }
+          reader.onerror = { _ => promise.failure(ErrorCodes.FrameReaderError) }
+          reader.readAsDataURL(file)
+          promise.future
+        })
       }
-      controller.addFrames(frames)
+      readFrames(frames)
     })
     framesClear.click(() => {
       framesClearOverlay.visible()
@@ -194,8 +206,6 @@ object BuilderLogic extends PageLogic[BuilderPage] with Logging with GlobalConte
       controller.clearFrames()
       framesClearOverlay.hidden()
     })
-
-    framesLoadingOverlay.visible()
   }
 
   private lazy val settingsDirection = $("#settings-direction")
@@ -290,7 +300,7 @@ object BuilderLogic extends PageLogic[BuilderPage] with Logging with GlobalConte
   private lazy val previewWrapper = $("#preview-wrapper")
 
   /** Binds the preview section logic */
-  def bindPreview(controller: Controller): Unit = {
+  def bindPreview(controller: Controller): Container = {
     val preview = new Application(Dynamic.literal(
       width = 1,
       height = 1,
@@ -308,28 +318,23 @@ object BuilderLogic extends PageLogic[BuilderPage] with Logging with GlobalConte
     Timer.schedule(20, () => previewSize.write(previewWrapper.width() xy previewWrapper.height()))
     previewSize /> { case size => preview.renderer.resize(size.x, size.y) }
 
-    val selectedFrame: Writeable[Option[FrameData]] = LazyData(None)
+    val selectedFrame: Writeable[Option[Frame]] = LazyData(None)
     controller.model.frames.onSelect { case ids =>
       selectedFrame.write(
         ids
           .headOption
           .flatMap(id => controller.model.frames.read(id))
-          .flatMap { frame =>
-            frame.data.read match {
-              case Loaded(start, end, data@FrameData(size, content, texture)) => Some(data)
-              case _ => None
-            }
-          }
       )
     }
 
     val root = preview.stage.sub
+    val loadContainer = root.sub.scaleTo(0.001)
     val frameSprite = new Sprite().anchorAtCenter.addTo(root)
     val scanimationContainer = root.sub
     val scanimationSprite = new Sprite().anchorAtCenter.addTo(scanimationContainer).scaleTo(0.5)
     scanimationSprite.visibleTo(false)
     selectedFrame /> {
-      case Some(FrameData(size, content, texture)) =>
+      case Some(Frame(name, size, content, texture)) =>
         frameSprite.textureTo(texture).visibleTo(true)
         scanimationSprite.textureTo(texture)
       case None =>
@@ -346,6 +351,8 @@ object BuilderLogic extends PageLogic[BuilderPage] with Logging with GlobalConte
     scanimationImage.click(() => {
       preview.renderer.extract.canvas(scanimationContainer).toBlob(blob => blob.download("scanimation.png"), "image/png")
     })
+
+    loadContainer
   }
 
 }

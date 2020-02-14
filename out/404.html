@@ -9,34 +9,20 @@
 </head>
 <body ontouchstart="" id="wispy" style="display: none">
 
-<div id="frames-loading-overlay" class="overlay overlay-close">
+<div id="frames-loading-overlay" class="overlay">
     <div>
         <div class="overlay-header">
             <span class="overlay-title">Importing frames</span>
-            <button class="overlay-close"><i class="material-icons">close</i></button>
         </div>
         <div class="overlay-content">
             <div id="frames-loading-list">
-                <div class="row loading">
+                <div class="row">
                     <i class="loading material-icons">hourglass_full</i>
                     <i class="success material-icons">check_circle</i>
                     <i class="failure material-icons">error</i>
                     <div class="name-wrapper"><span class="name">frame-001-with-very-long-name.png</span></div>
-                    <span class="failure description">code-0001: wrong image format</span>
-                </div>
-                <div class="row success">
-                    <i class="loading material-icons">hourglass_full</i>
-                    <i class="success material-icons">check_circle</i>
-                    <i class="failure material-icons">error</i>
-                    <div class="name-wrapper"><span class="name">frame-001.png</span></div>
-                    <span class="failure description">code-0001: wrong image format</span>
-                </div>
-                <div class="row failure">
-                    <i class="loading material-icons">hourglass_full</i>
-                    <i class="success material-icons">check_circle</i>
-                    <i class="failure material-icons">error</i>
-                    <div class="name-wrapper"><span class="name">frame-001-with-very-long-name.png</span></div>
-                    <span class="failure description">code-0001: wrong image format</span>
+                    <div class="break"></div>
+                    <span class="failure description">code-0001: failed to import frame as a texture</span>
                 </div>
             </div>
         </div>
@@ -56,24 +42,6 @@
         <div class="overlay-controls">
             <button class="overlay-close"><span>CANCEL</span></button>
             <button id="frames-clear-yes"><span>CLEAR</span></button>
-        </div>
-    </div>
-</div>
-
-<div id="frames-errors-overlay" class="overlay overlay-close">
-    <div>
-        <div class="overlay-header">
-            <span class="overlay-title">Failed to import frame</span>
-            <button class="overlay-close"><i class="material-icons">close</i></button>
-        </div>
-        <div class="overlay-content">
-            <p id="frames-errors-name">Name: frame000.png</p>
-            <p id="frames-errors-code">Code: 0001</p>
-            <p id="frames-errors-description">Reason: wrong image format</p>
-        </div>
-        <div class="overlay-controls">
-            <button class="overlay-close"><span>CLOSE</span></button>
-            <button id="frames-errors-yes"><span>REMOVE</span></button>
         </div>
     </div>
 </div>
