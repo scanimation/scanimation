@@ -10,4 +10,22 @@
   > button {
     margin: 0 0 0 @padSmall;
   }
+
+  #frames-show {
+    .stopped {
+      display: none;
+    }
+
+    .playing {
+      display: none;
+    }
+
+    &.stopped > .stopped {
+      display: initial;
+    }
+
+    &.playing > .playing {
+      display: initial;
+    }
+  }
 }

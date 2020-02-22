@@ -21,16 +21,38 @@ import scala.scalajs.js.Dynamic
 object BuilderLogic extends PageLogic[BuilderPage] with Logging with GlobalContext {
   override protected def logKey: String = "builder"
 
+  private val playingAnimation: Writeable[Boolean] = LazyData(false)
+  private val selectedFrame: Writeable[Option[Frame]] = LazyData(None)
+
   private lazy val loading = $("#loading")
 
   /** Returns the parent box for the page layout when page opens */
   override def open(controller: Controller): Unit = {
     bindOverlays()
+    bindInternal(controller)
     val loadContainer = bindPreview(controller)
     bindFrames(controller, loadContainer)
     bindSettings(controller)
     bindScanimate(controller)
     loading.hidden()
+  }
+
+  /** Binds the internal states of the UI */
+  def bindInternal(controller: Controller): Unit = {
+    controller.model.frames.onSelect { case ids =>
+      selectedFrame.write(
+        ids.headOption.flatMap(id => controller.model.frames.read(id))
+      )
+    }
+    selectedFrame /> {
+      case Some(frame) => playingAnimation.write(false)
+    }
+    controller.model.frames.data /> {
+      case Nil => playingAnimation.write(false)
+    }
+    playingAnimation /> {
+      case true => controller.deselectFrames()
+    }
   }
 
   private lazy val overlays = $(".overlay")
@@ -71,7 +93,8 @@ object BuilderLogic extends PageLogic[BuilderPage] with Logging with GlobalConte
       _ = framesLoadingOverlayClose.disable()
       _ = framesLoadingList.children().detach()
       _ = pixiContainer.removeChildren.visibleTo(true)
-      frames <- Future.sequence(list.map(async => readFrame(async)))
+      sorted = list.sortBy(frame => frame.name)
+      frames <- Future.sequence(sorted.map(async => readFrame(async)))
       _ = framesLoadingOverlayClose
         .click(() => {
           controller.addFrames(frames.flatten)
@@ -206,6 +229,15 @@ object BuilderLogic extends PageLogic[BuilderPage] with Logging with GlobalConte
       controller.clearFrames()
       framesClearOverlay.hidden()
     })
+    framesShow.click(() => {
+      playingAnimation.write(!playingAnimation())
+    })
+    playingAnimation /> {
+      case false =>
+        framesShow.removeClass("playing").addClass("stopped")
+      case true =>
+        framesShow.addClass("playing").removeClass("stopped")
+    }
   }
 
   private lazy val settingsDirection = $("#settings-direction")
@@ -318,15 +350,6 @@ object BuilderLogic extends PageLogic[BuilderPage] with Logging with GlobalConte
     Timer.schedule(20, () => previewSize.write(previewWrapper.width() xy previewWrapper.height()))
     previewSize /> { case size => preview.renderer.resize(size.x, size.y) }
 
-    val selectedFrame: Writeable[Option[Frame]] = LazyData(None)
-    controller.model.frames.onSelect { case ids =>
-      selectedFrame.write(
-        ids
-          .headOption
-          .flatMap(id => controller.model.frames.read(id))
-      )
-    }
-
     val root = preview.stage.sub
     val loadContainer = root.sub.scaleTo(0.001)
     val frameSprite = new Sprite().anchorAtCenter.addTo(root)
@@ -335,10 +358,21 @@ object BuilderLogic extends PageLogic[BuilderPage] with Logging with GlobalConte
     scanimationSprite.visibleTo(false)
     selectedFrame /> {
       case Some(Frame(name, size, content, texture)) =>
-        frameSprite.textureTo(texture).visibleTo(true)
+        frameSprite.textureTo(texture)
         scanimationSprite.textureTo(texture)
-      case None =>
-        frameSprite.visibleTo(false)
+    }
+    controller.model.frames.data /> {
+      case Nil => frameSprite.clearTexture
+    }
+    (playingAnimation && controller.model.frame && previewSize) /> {
+      case ((true, frameId), size) =>
+        val frames = controller.model.frames.data()
+        val index = (frameId / 5) % frames.size
+        val frame = frames(index.toInt)
+        val scale = (size / frame.size).min min 1
+        frameSprite.scaleTo(scale)
+        frameSprite.positionAt(size / 2)
+        frameSprite.textureTo(frame.texture)
     }
 
     (previewSize && selectedFrame) /> {

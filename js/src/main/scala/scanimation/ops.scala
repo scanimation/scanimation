@@ -174,6 +174,9 @@ object ops extends GlobalContext with Logging {
   implicit class SpriteOps(val a: Sprite) extends AnyVal {
     /** Changes the texture to given value */
     def textureTo(texture: BaseTexture): Sprite = a.mutate { a => a.texture = texture }
+
+    /** Clears the sprite texture */
+    def clearTexture: Sprite = a.mutate { a => a.texture = null }
   }
 
   implicit class ContainerOps(val a: Container) extends AnyVal {

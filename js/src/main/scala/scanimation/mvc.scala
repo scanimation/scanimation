@@ -101,6 +101,12 @@ object mvc {
       model.frames.select(id)
     }
 
+    /** Deselects all frames */
+    def deselectFrames(): Unit = {
+      log.info(s"deselecting frames")
+      model.frames.deselectAll()
+    }
+
     /** Shifts the position of the frame up */
     def moveFrameUp(id: String): Unit = {
       log.info(s"moving frame [$id] up")
