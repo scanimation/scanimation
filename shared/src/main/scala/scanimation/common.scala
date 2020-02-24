@@ -1097,6 +1097,9 @@ object common {
     /** Returns true for missing value */
     def isMissing: Boolean = transition() == Missing()
 
+    /** Returns true for loading value */
+    def isLoading: Boolean = transition().isInstanceOf[Loading[A]]
+
     /** Returns true for loaded value */
     def isLoaded: Boolean = transition().isInstanceOf[Loaded[A]]
   }

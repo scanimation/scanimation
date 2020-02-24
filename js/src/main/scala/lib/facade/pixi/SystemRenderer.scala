@@ -21,4 +21,7 @@ class SystemRenderer extends js.Object {
   val extract: Extract = js.native
 
   def resize(width: Double, height: Double): Unit = js.native
+
+  /** Renders the object to its WebGL view */
+  def render(displayObject: DisplayObject, renderTexture: RenderTexture): Unit = js.native
 }

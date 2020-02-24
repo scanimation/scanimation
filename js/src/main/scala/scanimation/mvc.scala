@@ -1,17 +1,19 @@
 package scanimation
 
-import lib.facade.pixi.BaseTexture
-import org.scalajs.dom
+import lib.facade.pixi.{Application, Graphics, RenderTexture, Texture}
 import scanimation.common.Transition.{Missing, TransitionException}
 import scanimation.common._
 import scanimation.conf.ScanimationConfig
 import scanimation.model.Note
+import scanimation.ops._
+import lib.pixi._
 import scanimation.util.global.GlobalContext
 import scanimation.util.http
 import scanimation.util.logging.Logging
 import scanimation.util.timer.{Animator, Timer}
 
 import scala.concurrent.Future
+import scala.scalajs.js.Dynamic
 
 object mvc {
 
@@ -163,15 +165,6 @@ object mvc {
       model.frameOverlap.write(Some(Default.frameOverlap))
     }
 
-    /** Requests the server to produce the scanimation */
-    def computeScanimation(): Unit = {
-      log.info("computing scanimation")
-      model.scanimation.loading
-      dom.window.setTimeout({ () =>
-        model.scanimation.loaded(CompleteScanimation("foo", "bar"))
-      }, 5000)
-    }
-
     /** Plays the computed scanimation in preview section */
     def showScanimation(): Unit = {
       log.info("showing scanimation")
@@ -189,9 +182,63 @@ object mvc {
 
     /** Runs the scanimation algo */
     def scanimate(): Unit = {
-      log.info("scanimating")
-      model.scanimation.loaded(CompleteScanimation("foo", "bar"))
+      if (!model.scanimation.isLoading) {
+        log.info("computing scanimation")
+        scanimateFuture.transition(model.scanimation)
+      }
     }
+
+    /** Runs the async scanimation algo */
+    def scanimateFuture: Future[CompleteScanimation] = for {
+      _ <- UnitFuture
+      _ = log.info("reading scanimation parameters")
+      frames = model.frames.data()
+      size = frames.headOption.map(frame => frame.size).getOrElse(throw ErrorCodes.FramesMissingError)
+      _ = frames.find(frame => frame.size != size).foreach(frame => throw ErrorCodes.FrameIncompatibleSizeError(frame, size))
+      frameWidth = model.frameWidth().getOrElse(throw ErrorCodes.FrameWidthError)
+      _ = log.info("creating background application")
+      app = new Application(Dynamic.literal(
+        width = size.x,
+        height = size.y,
+        antialias = true,
+        transparent = false,
+        resolution = 1
+      ))
+      _ = log.info("creating grid graphics")
+      gridTexture = RenderTexture.create(size.x, size.y)
+      gridContainer = {
+        val mask = new Graphics().fillRect(size, Vec2d.Zero, Colors.PureWhite).addTo(app.stage)
+        val container = app.stage.sub.maskWith(mask)
+
+        // background
+        new Graphics()
+          .fillRect(size, Vec2d.Zero, Colors.PureWhite)
+          .addTo(container)
+
+        val stripeCount = (1 + size.x.toDouble / frameWidth / frames.size).toInt
+        (0 until stripeCount).foreach { index =>
+          // single stripe
+          new Graphics()
+            .fillRect(
+              size = (frameWidth * (frames.size - 1)) xy size.y,
+              position = (index * frameWidth * frames.size) xy 0,
+              color = Colors.PureBlack
+            )
+            .addTo(container)
+        }
+        container
+      }
+      _ = log.info("rendering grid texture")
+      _ = app.renderer.render(gridContainer, gridTexture)
+      gridBlob <- app.export(gridContainer)
+      gridContent = gridBlob.encode
+      _ = log.info("creating scanimation graphics")
+      // scanimationTexture = RenderTexture.create(size.x, size.y)
+      _ = log.info("rendering scanimation texture")
+      //
+      _ = log.info("done scanimating")
+      result = CompleteScanimation(ImageContent("", null), ImageContent(gridContent, gridTexture))
+    } yield result
 
     /** Clears the previous scanimation results */
     def clearScanimation(): Unit = {
@@ -240,10 +287,9 @@ object mvc {
     *
     * @param name    the name of the imported file
     * @param size    the size of the imported frame
-    * @param content the read contents of the frame image
-    * @param texture the loaded pixi texture
+    * @param content the contents of the frame image
     */
-  case class Frame(name: String, size: Vec2i, content: String, texture: BaseTexture)
+  case class Frame(name: String, size: Vec2i, content: ImageContent)
 
   /** Contains builders for error codes */
   object ErrorCodes {
@@ -254,14 +300,23 @@ object mvc {
     def FrameSizeError: TransitionException = TransitionException("0002", "failed to read frame size")
 
     def FramePixiError: TransitionException = TransitionException("0003", "failed to import frame as a texture")
+
+    def FramesMissingError: TransitionException = TransitionException("0004", "at least one frame must be present")
+
+    def FrameWidthError: TransitionException = TransitionException("0005", "invalid frame width")
+
+    def FrameIncompatibleSizeError(frame: Frame, expected: Vec2i): TransitionException = TransitionException("0006", s"frames must have the same size: expected size [$expected], found size [${frame.size}] for frame [${frame.name}]")
   }
+
+  /** Describes the URL encoded and GPU loaded image */
+  case class ImageContent(url: String, texture: Texture)
 
   /** Contains scanimation processing results
     *
     * @param scanimation the image url of combined animation frames
     * @param grid        the image url of the scanimation grid with transparent background
     */
-  case class CompleteScanimation(scanimation: String, grid: String)
+  case class CompleteScanimation(scanimation: ImageContent, grid: ImageContent)
 
   /** The current application page */
   sealed trait Page {

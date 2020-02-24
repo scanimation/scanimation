@@ -173,7 +173,7 @@ object ops extends GlobalContext with Logging {
 
   implicit class SpriteOps(val a: Sprite) extends AnyVal {
     /** Changes the texture to given value */
-    def textureTo(texture: BaseTexture): Sprite = a.mutate { a => a.texture = texture }
+    def textureTo(texture: Texture): Sprite = a.mutate { a => a.texture = texture }
 
     /** Clears the sprite texture */
     def clearTexture: Sprite = a.mutate { a => a.texture = null }
@@ -293,11 +293,19 @@ object ops extends GlobalContext with Logging {
 
   implicit class BlobOps(val blob: Blob) extends AnyVal {
     /** Downloads given blob as an image */
+    def download(name: String): Unit = blob.encode.download(name)
+
+    /** Converts blob to an encoded image string */
+    def encode: String = URL.createObjectURL(blob)
+  }
+
+  implicit class StringImageOps(val content: String) extends AnyVal {
+    /** Downloads given contents as an image */
     def download(name: String): Unit = {
       $("<a>")
         .appendTo($("body"))
         .attr("download", name)
-        .attr("href", URL.createObjectURL(blob))
+        .attr("href", content)
         .mutate(a => a(0).click())
         .detach()
     }

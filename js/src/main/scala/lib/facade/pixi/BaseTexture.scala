@@ -5,6 +5,6 @@ import scala.scalajs.js.annotation.JSGlobal
 
 @js.native
 @JSGlobal("PIXI.BaseTexture")
-class BaseTexture extends js.Object {
+class BaseTexture extends Texture {
   var frame: Rectangle = js.native
 }

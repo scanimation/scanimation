@@ -135,7 +135,7 @@ object BuilderLogic extends PageLogic[BuilderPage] with Logging with GlobalConte
         _ = new Sprite(texture).addTo(pixiContainer)
         _ = log.info(s"frame [$name] fully loaded")
         _ = item.removeClass("loading").addClass("success")
-      } yield Some(Frame(name, size, content, texture))
+      } yield Some(Frame(name, size, ImageContent(content, texture)))
       future.recover {
         case up: TransitionException =>
           item.removeClass("loading").addClass("failure")
@@ -298,6 +298,7 @@ object BuilderLogic extends PageLogic[BuilderPage] with Logging with GlobalConte
   private lazy val resultsSection = $("#results-section")
   private lazy val scanimationReset = $("#scanimation-reset")
   private lazy val scanimationImage = $("#scanimation-image")
+  private lazy val scanimationGrid = $("#scanimation-grid")
 
   /** Binds the scanimate section logic */
   def bindScanimate(controller: Controller): Unit = {
@@ -357,7 +358,7 @@ object BuilderLogic extends PageLogic[BuilderPage] with Logging with GlobalConte
     val scanimationSprite = new Sprite().anchorAtCenter.addTo(scanimationContainer).scaleTo(0.5)
     scanimationSprite.visibleTo(false)
     selectedFrame /> {
-      case Some(Frame(name, size, content, texture)) =>
+      case Some(Frame(name, size, ImageContent(url, texture))) =>
         frameSprite.textureTo(texture)
         scanimationSprite.textureTo(texture)
     }
@@ -372,7 +373,7 @@ object BuilderLogic extends PageLogic[BuilderPage] with Logging with GlobalConte
         val scale = (size / frame.size).min min 1
         frameSprite.scaleTo(scale)
         frameSprite.positionAt(size / 2)
-        frameSprite.textureTo(frame.texture)
+        frameSprite.textureTo(frame.content.texture)
     }
 
     (previewSize && selectedFrame) /> {
@@ -384,6 +385,13 @@ object BuilderLogic extends PageLogic[BuilderPage] with Logging with GlobalConte
 
     scanimationImage.click(() => {
       preview.renderer.extract.canvas(scanimationContainer).toBlob(blob => blob.download("scanimation.png"), "image/png")
+    })
+    scanimationGrid.click(() => {
+      controller.model.scanimation() match {
+        case Loaded(start, end, scanimation) => scanimation.grid.url.download("grid.png")
+        case Failed(start, end, code, reason) => log.info(s"$code: $reason")
+        case _ => // ignore
+      }
     })
 
     loadContainer

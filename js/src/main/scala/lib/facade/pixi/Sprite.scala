@@ -6,7 +6,7 @@ import scala.scalajs.js.annotation.JSGlobal
 @js.native
 @JSGlobal("PIXI.Sprite")
 class Sprite extends Container {
-  def this(texture: BaseTexture = js.native) = this()
+  def this(texture: Texture = js.native) = this()
 
-  var texture: BaseTexture = js.native
+  var texture: Texture = js.native
 }

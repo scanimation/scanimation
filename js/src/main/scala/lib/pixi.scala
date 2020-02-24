@@ -1,7 +1,7 @@
 package lib
 
-import lib.facade.pixi.{BaseTexture, Graphics, Loader, Texture}
-import org.scalajs.dom.raw.HTMLImageElement
+import lib.facade.pixi.{Application, BaseTexture, DisplayObject, Graphics, Loader, Texture}
+import org.scalajs.dom.raw.{Blob, HTMLImageElement}
 import scanimation.common._
 import scanimation.util.logging.Logging
 
@@ -109,6 +109,15 @@ object pixi extends Logging {
         .lineTo(0, c)
         .lineTo(c, 0)
         .endFill()
+    }
+  }
+
+  implicit class ApplicationOps(val app: Application) extends AnyVal {
+    /** Exports given display object into image blob */
+    def export(content: DisplayObject): Future[Blob] = {
+      val promise = Promise[Blob]
+      app.renderer.extract.canvas(content).toBlob(blob => promise.success(blob), "image/png")
+      promise.future
     }
   }
 
