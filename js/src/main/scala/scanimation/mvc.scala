@@ -64,6 +64,7 @@ object mvc {
         case _ =>
           model.frameCount.write(None)
       }
+      model.frames.data /> { case _ => clearScanimation() }
     }
 
     /** Binds the settings listeners */
@@ -74,6 +75,7 @@ object mvc {
         case _ =>
           model.defaultSettings.write(false)
       }
+      (model.frameWidth && model.frameOverlap && model.direction) /> { case _ => clearScanimation() }
     }
 
     /** Binds the scanimation logic */
@@ -196,6 +198,8 @@ object mvc {
       size = frames.headOption.map(frame => frame.size).getOrElse(throw ErrorCodes.FramesMissingError)
       _ = frames.find(frame => frame.size != size).foreach(frame => throw ErrorCodes.FrameIncompatibleSizeError(frame, size))
       frameWidth = model.frameWidth().getOrElse(throw ErrorCodes.FrameWidthError)
+      overlapCount = model.frameOverlap().getOrElse(throw ErrorCodes.FrameOverlapError)
+      direction = model.direction()
       _ = log.info("creating background application")
       app = new Application(Dynamic.literal(
         width = size.x,
@@ -215,15 +219,23 @@ object mvc {
           .fillRect(size, Vec2d.Zero, Colors.PureWhite)
           .addTo(container)
 
-        val stripeCount = (1 + size.x.toDouble / frameWidth / frames.size).toInt
+        val horizontal = direction == Directions.Left || direction == Directions.Right
+        val stripeLength = if (horizontal) size.x else size.y
+        val actualCount = frames.size / overlapCount
+        val stripeCount = (1 + stripeLength.toDouble / frameWidth / actualCount).toInt
+        val stripeWidth = frameWidth * (actualCount - 1)
         (0 until stripeCount).foreach { index =>
           // single stripe
+          val stripeSize = if (horizontal) stripeWidth xy size.y else size.x xy stripeWidth
+          val stripeOffset = index * frameWidth * actualCount
+          val stripePosition = direction match {
+            case Directions.Left => stripeOffset xy 0
+            case Directions.Right => (size.x - stripeOffset - stripeWidth) xy 0
+            case Directions.Up => 0 xy stripeOffset
+            case Directions.Down => 0 xy (size.y - stripeOffset - stripeWidth)
+          }
           new Graphics()
-            .fillRect(
-              size = (frameWidth * (frames.size - 1)) xy size.y,
-              position = (index * frameWidth * frames.size) xy 0,
-              color = Colors.PureBlack
-            )
+            .fillRect(stripeSize, stripePosition, Colors.PureBlack)
             .addTo(container)
         }
         container
@@ -305,7 +317,9 @@ object mvc {
 
     def FrameWidthError: TransitionException = TransitionException("0005", "invalid frame width")
 
-    def FrameIncompatibleSizeError(frame: Frame, expected: Vec2i): TransitionException = TransitionException("0006", s"frames must have the same size: expected size [$expected], found size [${frame.size}] for frame [${frame.name}]")
+    def FrameOverlapError: TransitionException = TransitionException("0006", "invalid frame overlap")
+
+    def FrameIncompatibleSizeError(frame: Frame, expected: Vec2i): TransitionException = TransitionException("0007", s"frames must have the same size: expected size [${expected.x}x${expected.y}], found size [${frame.size.x}x${frame.size.y}] for frame [${frame.name}]")
   }
 
   /** Describes the URL encoded and GPU loaded image */

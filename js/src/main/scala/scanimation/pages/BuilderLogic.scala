@@ -360,7 +360,8 @@ object BuilderLogic extends PageLogic[BuilderPage] with Logging with GlobalConte
     selectedFrame /> {
       case Some(Frame(name, size, ImageContent(url, texture))) =>
         frameSprite.textureTo(texture)
-        scanimationSprite.textureTo(texture)
+      case None =>
+        frameSprite.clearTexture
     }
     controller.model.frames.data /> {
       case Nil => frameSprite.clearTexture
@@ -384,14 +385,10 @@ object BuilderLogic extends PageLogic[BuilderPage] with Logging with GlobalConte
     }
 
     scanimationImage.click(() => {
-      preview.renderer.extract.canvas(scanimationContainer).toBlob(blob => blob.download("scanimation.png"), "image/png")
+      controller.model.scanimation().valueOpt.foreach(value => value.scanimation.url.download("scanimation.png"))
     })
     scanimationGrid.click(() => {
-      controller.model.scanimation() match {
-        case Loaded(start, end, scanimation) => scanimation.grid.url.download("grid.png")
-        case Failed(start, end, code, reason) => log.info(s"$code: $reason")
-        case _ => // ignore
-      }
+      controller.model.scanimation().valueOpt.foreach(value => value.grid.url.download("grid.png"))
     })
 
     loadContainer
