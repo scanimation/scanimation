@@ -40,7 +40,7 @@ object conf extends Logging {
     server = "http://127.0.0.1:8081",
     client = http.hostPortString,
     discordLogin = s"https://discordapp.com/api/oauth2/authorize?client_id=583316882002673683&redirect_uri=${http.hostPortString}/discord&response_type=code&scope=identify",
-    logs = LogConfig(wire = false, debug = false, info = true, warnings = true, errors = true),
+    logs = LogConfig(wire = false, debug = true, info = true, warnings = true, errors = true),
   )
 
   implicit val logConfigFormat: CF[LogConfig] = format5(LogConfig)

@@ -12,4 +12,22 @@
   #scanimation-image, #scanimation-grid {
     .fill();
   }
+
+  #scanimation-play {
+    .stopped {
+      display: none;
+    }
+
+    .playing {
+      display: none;
+    }
+
+    &.stopped > .stopped {
+      display: initial;
+    }
+
+    &.playing > .playing {
+      display: initial;
+    }
+  }
 }

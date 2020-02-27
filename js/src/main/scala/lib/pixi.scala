@@ -1,13 +1,12 @@
 package lib
 
-import lib.facade.pixi.{Application, BaseTexture, DisplayObject, Graphics, Loader, Texture}
+import lib.facade.pixi._
 import org.scalajs.dom.raw.{Blob, HTMLImageElement}
 import scanimation.common._
 import scanimation.util.logging.Logging
 
 import scala.concurrent.{ExecutionContext, Future, Promise}
 import scala.scalajs.js.|
-import scala.util.Try
 import scala.util.control.NonFatal
 
 /** The HTML5 Creation Engine
@@ -15,22 +14,8 @@ import scala.util.control.NonFatal
 object pixi extends Logging {
   override protected def logKey: String = "pixi"
 
-  //  /** Creates pixi application contained in given drawing box */
-  //  def create(box: DrawingBox): Application = {
-  //    val app = new Application(js.Dynamic.literal(
-  //      width = box.layout.relBounds().size.x.toInt max 1,
-  //      height = box.layout.relBounds().size.y.toInt max 1,
-  //      antialias = true,
-  //      resolution = 1,
-  //      transparent = true
-  //    ))
-  //    val canvas = app.view.asInstanceOf[HTMLCanvasElement]
-  //    box.layout.relBounds /> {
-  //      case bounds => app.renderer.resize(bounds.size.x max 1, bounds.size.y max 1)
-  //    }
-  //    box.registerCanvas(canvas)
-  //    app
-  //  }
+  /** Creates new graphics display object */
+  def graphics: Graphics = new Graphics()
 
   /** Sync object for loading assets */
   private val loaderSync = new Object()
@@ -109,6 +94,36 @@ object pixi extends Logging {
         .lineTo(0, c)
         .lineTo(c, 0)
         .endFill()
+    }
+
+    /** Draws a set of stripes within the given area, starting from given side
+      *
+      * @param areaSize    the total size of area to be covered
+      * @param areaStart   the side to start from, e.g. Vec2d.Left
+      * @param areaOffset  the pixel offset to leave empty from the starting side
+      * @param stripeWidth the width of the stripes
+      * @param stripeGap   the empty gap between drawn stripes
+      */
+    def fillStripes(areaSize: Vec2d, areaStart: Vec2d, areaOffset: Double, stripeWidth: Double, stripeGap: Double, color: Color = Colors.PureBlack): Graphics = {
+      val (areaLength, areaWidth) = areaStart match {
+        case Vec2d.Top | Vec2d.Bottom => areaSize.y -> areaSize.x
+        case Vec2d.Right | Vec2d.Left => areaSize.x -> areaSize.y
+      }
+      Stream.from(0)
+        .takeWhile { index => areaOffset + index * (stripeWidth + stripeGap) < areaLength }
+        .toList
+        .foreach { index =>
+          val stripeOffset = areaOffset + index * (stripeWidth + stripeGap)
+          val cutWidth = (areaLength - stripeOffset) min stripeWidth
+          val (position, size) = areaStart match {
+            case Vec2d.Top => (0 xy stripeOffset) -> (areaWidth xy cutWidth)
+            case Vec2d.Right => ((areaLength - stripeOffset - cutWidth) xy 0) -> (cutWidth xy areaWidth)
+            case Vec2d.Bottom => (0 xy (areaLength - stripeOffset - cutWidth)) -> (areaWidth xy cutWidth)
+            case Vec2d.Left => (stripeOffset xy 0) -> (cutWidth xy areaWidth)
+          }
+          graphics.fillRect(size, position, color)
+        }
+      graphics
     }
   }
 

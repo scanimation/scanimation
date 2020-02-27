@@ -4,7 +4,7 @@ import java.lang.System.currentTimeMillis
 import java.time.OffsetDateTime
 import java.util.UUID
 
-import scanimation.common.Transition.{Failed, Loaded, Loading, Missing, TransitionException}
+import scanimation.common.Transition._
 
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
@@ -573,17 +573,6 @@ object common {
         case result => result
       }
     }
-
-    /** Writes the future result into transition when it's ready */
-    def transition(transition: TransitionData[A])(implicit ec: ExecutionContext): Future[A] = {
-      transition.loading
-      future.whenSuccessful(v => transition.loaded(v))
-      future.whenFailed {
-        case TransitionException(code, reason) => transition.failed(code, reason)
-        case other => transition.failed("unknown", other.getMessage)
-      }
-      future
-    }
   }
 
   implicit class FutureListOps[A](val futures: List[Future[A]]) extends AnyVal {
@@ -624,6 +613,16 @@ object common {
         case -1 => None
         case 0 => None
         case index => Some(list(index - 1))
+      }
+    }
+  }
+
+  implicit class AnyListListOps[A](val list: List[List[A]]) extends AnyVal {
+    /** Flips the lists inside out */
+    def insideOut: List[List[A]] = {
+      val innerCount = list.map(sub => sub.size).maxOr(0)
+      (0 until innerCount).toList.map { index =>
+        list.flatMap(sub => sub.lift(index))
       }
     }
   }
@@ -750,6 +749,9 @@ object common {
 
     /** Returns a random vector within current values */
     def random(min: Vec2d = Vec2d.Zero, random: Random = new Random()): Vec2d = Vec2d(random.nextDouble() * (x - min.x) + min.x, random.nextDouble() * (y - min.y) + min.y)
+
+    /** Shifts the vector to a target position up to a given progress */
+    def progress(progress: Double, vec: Vec2d): Vec2d = this + (vec - this) * progress
   }
 
   object Vec2d {
@@ -1019,6 +1021,18 @@ object common {
   }
 
   implicit class TransitionWritableOps[A](val transition: TransitionData[A]) extends AnyVal {
+    /** Puts transition into loading state, and writes new value once future is complete */
+    def loadFuture(futureCode: => Future[A])(implicit ec: ExecutionContext): TransitionData[A] = {
+      transition.loading
+      futureCode
+        .whenSuccessful(v => transition.loaded(v))
+        .whenFailed {
+          case TransitionException(code, reason) => transition.failed(code, reason)
+          case other => transition.failed("unknown", other.getMessage)
+        }
+      transition
+    }
+
     /** Puts transition into loading state */
     def loading: TransitionData[A] = {
       transition() match {

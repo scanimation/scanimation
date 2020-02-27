@@ -39,6 +39,7 @@ class DisplayObject extends js.Object {
 
   var filters: js.Array[Filter] = js.native
   var tint: Double = js.native
+  var blendMode: Double = js.native
 
   def getGlobalPosition(): Point = js.native
 

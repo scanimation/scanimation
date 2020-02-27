@@ -1,12 +1,12 @@
 package scanimation
 
-import lib.facade.pixi.{Application, Graphics, RenderTexture, Texture}
+import lib.facade.pixi._
+import lib.pixi._
 import scanimation.common.Transition.{Missing, TransitionException}
 import scanimation.common._
 import scanimation.conf.ScanimationConfig
 import scanimation.model.Note
 import scanimation.ops._
-import lib.pixi._
 import scanimation.util.global.GlobalContext
 import scanimation.util.http
 import scanimation.util.logging.Logging
@@ -186,21 +186,23 @@ object mvc {
     def scanimate(): Unit = {
       if (!model.scanimation.isLoading) {
         log.info("computing scanimation")
-        scanimateFuture.transition(model.scanimation)
+        model.scanimation.loadFuture(scanimateFuture())
       }
     }
 
     /** Runs the async scanimation algo */
-    def scanimateFuture: Future[CompleteScanimation] = for {
+    def scanimateFuture(): Future[CompleteScanimation] = for {
       _ <- UnitFuture
-      _ = log.info("reading scanimation parameters")
+      _ = log.debug("reading scanimation parameters")
       frames = model.frames.data()
       size = frames.headOption.map(frame => frame.size).getOrElse(throw ErrorCodes.FramesMissingError)
       _ = frames.find(frame => frame.size != size).foreach(frame => throw ErrorCodes.FrameIncompatibleSizeError(frame, size))
       frameWidth = model.frameWidth().getOrElse(throw ErrorCodes.FrameWidthError)
       overlapCount = model.frameOverlap().getOrElse(throw ErrorCodes.FrameOverlapError)
       direction = model.direction()
-      _ = log.info("creating background application")
+      side = direction.asVecSide
+
+      _ = log.debug("creating background application")
       app = new Application(Dynamic.literal(
         width = size.x,
         height = size.y,
@@ -208,48 +210,55 @@ object mvc {
         transparent = false,
         resolution = 1
       ))
-      _ = log.info("creating grid graphics")
-      gridTexture = RenderTexture.create(size.x, size.y)
-      gridContainer = {
-        val mask = new Graphics().fillRect(size, Vec2d.Zero, Colors.PureWhite).addTo(app.stage)
-        val container = app.stage.sub.maskWith(mask)
+      actualCount = frames.size / overlapCount
+      stripeWidth = frameWidth * (actualCount - 1)
 
+      _ = log.debug("creating mask")
+      mask = graphics.fillRect(size, Vec2d.Zero, Colors.PureWhite).addTo(app.stage)
+
+      _ = log.debug("creating grid graphics")
+      gridContainer = app.stage.sub
+        // mask
+        .maskWith(mask)
         // background
-        new Graphics()
-          .fillRect(size, Vec2d.Zero, Colors.PureWhite)
-          .addTo(container)
+        .withChild(graphics.fillRect(size, Vec2d.Zero, Colors.PureWhite))
+        // stripes
+        .withChild(graphics.fillStripes(size, side, 0, stripeWidth, frameWidth, Colors.PureBlack))
 
-        val horizontal = direction == Directions.Left || direction == Directions.Right
-        val stripeLength = if (horizontal) size.x else size.y
-        val actualCount = frames.size / overlapCount
-        val stripeCount = (1 + stripeLength.toDouble / frameWidth / actualCount).toInt
-        val stripeWidth = frameWidth * (actualCount - 1)
-        (0 until stripeCount).foreach { index =>
-          // single stripe
-          val stripeSize = if (horizontal) stripeWidth xy size.y else size.x xy stripeWidth
-          val stripeOffset = index * frameWidth * actualCount
-          val stripePosition = direction match {
-            case Directions.Left => stripeOffset xy 0
-            case Directions.Right => (size.x - stripeOffset - stripeWidth) xy 0
-            case Directions.Up => 0 xy stripeOffset
-            case Directions.Down => 0 xy (size.y - stripeOffset - stripeWidth)
-          }
-          new Graphics()
-            .fillRect(stripeSize, stripePosition, Colors.PureBlack)
-            .addTo(container)
-        }
-        container
-      }
-      _ = log.info("rendering grid texture")
+      _ = log.debug("rendering grid texture")
+      gridTexture = RenderTexture.create(size.x, size.y)
       _ = app.renderer.render(gridContainer, gridTexture)
       gridBlob <- app.export(gridContainer)
       gridContent = gridBlob.encode
-      _ = log.info("creating scanimation graphics")
-      // scanimationTexture = RenderTexture.create(size.x, size.y)
-      _ = log.info("rendering scanimation texture")
-      //
-      _ = log.info("done scanimating")
-      result = CompleteScanimation(ImageContent("", null), ImageContent(gridContent, gridTexture))
+      gridOutput <- SharedLoader.loadAsync("grid", gridContent)
+
+      _ = log.debug("creating scanimation graphics")
+      scanimationContainer = app.stage.sub
+        // mask
+        .maskWith(mask)
+        // background
+        .withChild(graphics.fillRect(size, Vec2d.Zero, Colors.PureWhite))
+      // layers of overlapping frames
+      _ = frames.grouped(actualCount).toList.insideOut.zipWithIndex.foreach { case (layer, index) =>
+        log.debug(s"adding layer [$index]: ${layer.map(f => f.name).mkString(", ")}")
+        scanimationContainer.sub
+          // layer mask
+          .maskWith(graphics.fillStripes(size, side, (actualCount - index - 1) * frameWidth, frameWidth, stripeWidth).addTo(scanimationContainer))
+          // layer children
+          .withChildren(layer.map(frame => new Sprite(frame.content.texture).withBlendMode(BlendModes.MULTIPLY)))
+      }
+      _ = log.debug("rendering scanimation texture")
+      scanimationTexture = RenderTexture.create(size.x, size.y)
+      _ = app.renderer.render(scanimationContainer, scanimationTexture)
+      scanimationBlob <- app.export(scanimationContainer)
+      scanimationContent = scanimationBlob.encode
+      scanimationOutput <- SharedLoader.loadAsync("scanimation", scanimationContent)
+
+      _ = log.debug("cleaning up")
+      _ = app.stage.removeChildren
+
+      _ = log.debug("done scanimating")
+      result = CompleteScanimation(ImageContent(scanimationContent, scanimationOutput), ImageContent(gridContent, gridOutput))
     } yield result
 
     /** Clears the previous scanimation results */
@@ -359,6 +368,16 @@ object mvc {
   /** Describes the direction where scanimation grid moves to */
   object Directions extends Enumeration {
     val Left, Right, Up, Down = Value
+  }
+
+  implicit class DirectionsOps(val direction: Directions.Value) extends AnyVal {
+    /** Converts direction to rectangle side towards which the movement will occur */
+    def asVecSide: Vec2d = direction match {
+      case Directions.Left => Vec2d.Left
+      case Directions.Right => Vec2d.Right
+      case Directions.Up => Vec2d.Top
+      case Directions.Down => Vec2d.Bottom
+    }
   }
 
 }

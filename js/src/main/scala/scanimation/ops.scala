@@ -130,6 +130,9 @@ object ops extends GlobalContext with Logging {
     /** Changes the filters of the object */
     def filterWith(filters: List[Filter]): A = a.mutate { a => a.filters = filters }
 
+    /** Changes the blend mode to a given value */
+    def withBlendMode(mode: Double): A = a.mutate { a => a.blendMode = mode }
+
     /** Binds the scale to a given bind */
     def bindScale(data: Data[Double]): A = a.mutate { a => data /> { case scale => a.scaleTo(scale) } }
 
@@ -185,6 +188,12 @@ object ops extends GlobalContext with Logging {
 
     /** Removes all children from container */
     def removeChildren: Container = a.mutate { a => while (a.children.nonEmpty) a.removeChild(a.children.head) }
+
+    /** Adds given child to the contained */
+    def withChild(child: DisplayObject): Container = a.mutate { a => a.addChild(child) }
+
+    /** Adds given children to the container */
+    def withChildren(children: List[DisplayObject]): Container = a.mutate { a => children.foreach(c => a.addChild(c)) }
   }
 
   implicit class PointOps(val p: Point) extends AnyVal {

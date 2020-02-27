@@ -1,6 +1,6 @@
 package scanimation.pages
 
-import lib.facade.pixi.{Application, Container, SharedLoader, Sprite}
+import lib.facade.pixi._
 import lib.filedrop._
 import lib.pixi._
 import org.querki.jquery._
@@ -21,7 +21,12 @@ import scala.scalajs.js.Dynamic
 object BuilderLogic extends PageLogic[BuilderPage] with Logging with GlobalContext {
   override protected def logKey: String = "builder"
 
+  private val frameDuration = 5
+  private val gridOverlap = 0.75
+
   private val playingAnimation: Writeable[Boolean] = LazyData(false)
+  private val playingScanimation: Writeable[Boolean] = LazyData(false)
+  private val scanimationStartFrame: Writeable[Long] = LazyData(0L)
   private val selectedFrame: Writeable[Option[Frame]] = LazyData(None)
 
   private lazy val loading = $("#loading")
@@ -45,13 +50,24 @@ object BuilderLogic extends PageLogic[BuilderPage] with Logging with GlobalConte
       )
     }
     selectedFrame /> {
-      case Some(frame) => playingAnimation.write(false)
+      case Some(frame) =>
+        playingAnimation.write(false)
+        playingScanimation.write(false)
     }
     controller.model.frames.data /> {
-      case Nil => playingAnimation.write(false)
+      case Nil =>
+        playingAnimation.write(false)
+        playingScanimation.write(false)
     }
     playingAnimation /> {
-      case true => controller.deselectFrames()
+      case true =>
+        controller.deselectFrames()
+        playingScanimation.write(false)
+    }
+    playingScanimation /> {
+      case true =>
+        controller.deselectFrames()
+        playingAnimation.write(false)
     }
   }
 
@@ -299,6 +315,7 @@ object BuilderLogic extends PageLogic[BuilderPage] with Logging with GlobalConte
   private lazy val scanimationReset = $("#scanimation-reset")
   private lazy val scanimationImage = $("#scanimation-image")
   private lazy val scanimationGrid = $("#scanimation-grid")
+  private lazy val scanimationPlay = $("#scanimation-play")
 
   /** Binds the scanimate section logic */
   def bindScanimate(controller: Controller): Unit = {
@@ -328,6 +345,16 @@ object BuilderLogic extends PageLogic[BuilderPage] with Logging with GlobalConte
     }
     scanimate.click(() => controller.scanimate())
     scanimationReset.click(() => controller.clearScanimation())
+    scanimationPlay.click(() => {
+      playingScanimation.write(!playingScanimation())
+      if (playingScanimation()) scanimationStartFrame.write(controller.model.frame())
+    })
+    playingScanimation /> {
+      case false =>
+        scanimationPlay.removeClass("playing").addClass("stopped")
+      case true =>
+        scanimationPlay.addClass("playing").removeClass("stopped")
+    }
   }
 
   private lazy val previewWrapper = $("#preview-wrapper")
@@ -354,9 +381,7 @@ object BuilderLogic extends PageLogic[BuilderPage] with Logging with GlobalConte
     val root = preview.stage.sub
     val loadContainer = root.sub.scaleTo(0.001)
     val frameSprite = new Sprite().anchorAtCenter.addTo(root)
-    val scanimationContainer = root.sub
-    val scanimationSprite = new Sprite().anchorAtCenter.addTo(scanimationContainer).scaleTo(0.5)
-    scanimationSprite.visibleTo(false)
+    val scanimationContainer = root.sub.visibleTo(false)
     selectedFrame /> {
       case Some(Frame(name, size, ImageContent(url, texture))) =>
         frameSprite.textureTo(texture)
@@ -369,12 +394,61 @@ object BuilderLogic extends PageLogic[BuilderPage] with Logging with GlobalConte
     (playingAnimation && controller.model.frame && previewSize) /> {
       case ((true, frameId), size) =>
         val frames = controller.model.frames.data()
-        val index = (frameId / 5) % frames.size
+        val index = (frameId / frameDuration) % frames.size
         val frame = frames(index.toInt)
         val scale = (size / frame.size).min min 1
-        frameSprite.scaleTo(scale)
-        frameSprite.positionAt(size / 2)
-        frameSprite.textureTo(frame.content.texture)
+        frameSprite
+          .scaleTo(scale)
+          .positionAt(size / 2)
+          .textureTo(frame.content.texture)
+      case _ =>
+        frameSprite.clearTexture
+    }
+
+    val scanimationSprite = new Sprite().anchorAtCenter.addTo(scanimationContainer)
+    val gridSprite = new Sprite().anchorAtCenter.withBlendMode(BlendModes.MULTIPLY).addTo(scanimationContainer)
+    controller.model.scanimation /> {
+      case Loaded(start, end, scanimation) =>
+        scanimationSprite.textureTo(scanimation.scanimation.texture)
+        gridSprite.textureTo(scanimation.grid.texture)
+      case Missing() =>
+        playingScanimation.write(false)
+    }
+    (playingScanimation && controller.model.frame && scanimationStartFrame && previewSize) /> {
+      case (((true, frameId), startFrame), size) =>
+        scanimationContainer.visibleTo(true)
+        for {
+          frameSize <- controller.model.imageSize()
+          frameWidth <- controller.model.frameWidth()
+          direction = controller.model.direction()
+          frameCount <- controller.model.frameCount()
+        } yield {
+          val scale = (size / frameSize).min min 1
+          scanimationSprite
+            .scaleTo(scale)
+            .positionAt(size / 2)
+
+          val areaLength = direction match {
+            case Directions.Left | Directions.Right => frameSize.x
+            case Directions.Up | Directions.Down => frameSize.y
+          }
+          val repeats = areaLength / (frameWidth * frameCount) * (gridOverlap * 2)
+          val totalDuration = frameDuration * frameCount * repeats
+          val progress = ((frameId - startFrame) % totalDuration.toLong) / totalDuration
+          val start = direction match {
+            case Directions.Left => (areaLength * gridOverlap) xy 0
+            case Directions.Right => (areaLength * -gridOverlap) xy 0
+            case Directions.Up => 0 xy (areaLength * gridOverlap)
+            case Directions.Down => 0 xy (areaLength * -gridOverlap)
+          }
+          val end = Vec2d.Zero - start
+          val position = start.progress(progress, end) * scale + size / 2
+          gridSprite
+            .scaleTo(scale)
+            .positionAt(position)
+        }
+      case _ =>
+        scanimationContainer.visibleTo(false)
     }
 
     (previewSize && selectedFrame) /> {
