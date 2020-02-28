@@ -4,8 +4,8 @@ SBT:
 ```
 all/clean: scanimationJVM/clean scanimationJS/clean
 jvm/build: scanimationJVM/clean scanimationJVM/compile scanimationJVM/assembly
-js/build:  scanimationJS/clean  scanimationJS/compile  scanimationJS/fastOptJS nodeJS moveJS lessJS
-js/deploy: scanimationJS/clean  scanimationJS/compile  scanimationJS/fullOptJS nodeJS moveJS lessJS pushJS
+js/build:  scanimationJS/clean  scanimationJS/compile  scanimationJS/fastOptJS nodeJS lessJS moveJS
+js/deploy: scanimationJS/clean  scanimationJS/compile  scanimationJS/fullOptJS nodeJS lessJS moveJS pushJS
 ```
 
 Server:
@@ -23,4 +23,10 @@ heroku logs --tail --app wispy-scanimation
 
 Todo:
 ```
+- frame overlap for animation preview
+- help buttons
+- grid color picker
+- what is scanimation video
+- basic tutorial video
+- advanced tutorial video
 ```

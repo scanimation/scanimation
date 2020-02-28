@@ -10,10 +10,7 @@ import scanimation.util.global.GlobalContext
 import scanimation.util.http._
 import scanimation.util.logging.Logging
 
-import scala.concurrent.Future
-
 /** Starts the UI application */
-//noinspection TypeAnnotation
 object app extends App with GlobalContext with Logging {
   override protected def logKey: String = "app"
 
@@ -21,16 +18,10 @@ object app extends App with GlobalContext with Logging {
   implicit val conf: ScanimationConfig = scanimation.conf.Config
 
   $ { () =>
-    history.location.pathname match {
-      case discord if discord.startsWith("/discord") =>
-        queryParameter("code") match {
-          case Some(code) => loginDiscord(code)
-          case None =>
-            log.warn("login error, redirecting to [/]")
-            redirect("/")
-        }
-      case path =>
-        startScanimation(path)
+    if (isHttps || isLocalhost) {
+      startScanimation(history.location.pathname)
+    } else {
+      redirectFull(httpsString)
     }
   }
 
@@ -46,13 +37,5 @@ object app extends App with GlobalContext with Logging {
     } yield ()
     future.whenFailed { case up => log.error("failed to build ui", up) }
   }
-
-  /** Cleans up location after discord oauth2 flow */
-  def loginDiscord(code: String)(implicit config: ScanimationConfig): Unit = for {
-    user <- Future.successful(None) // post[LoginDiscord, User]("/api/discord", LoginDiscord(code))
-    _ = log.info(s"logged in as [$user]")
-    _ = redirectSilent("/")
-    _ = startScanimation("/")
-  } yield user
 
 }

@@ -25,6 +25,7 @@ object BuilderLogic extends PageLogic[BuilderPage] with Logging with GlobalConte
   private val gridOverlap = 0.75
 
   private val playingAnimation: Writeable[Boolean] = LazyData(false)
+  private val animationFrameId: Writeable[Option[ListElementId]] = LazyData(None)
   private val playingScanimation: Writeable[Boolean] = LazyData(false)
   private val scanimationStartFrame: Writeable[Long] = LazyData(0L)
   private val selectedFrame: Writeable[Option[Frame]] = LazyData(None)
@@ -39,6 +40,7 @@ object BuilderLogic extends PageLogic[BuilderPage] with Logging with GlobalConte
     bindFrames(controller, loadContainer)
     bindSettings(controller)
     bindScanimate(controller)
+    bindHelp()
     loading.hidden()
   }
 
@@ -68,6 +70,10 @@ object BuilderLogic extends PageLogic[BuilderPage] with Logging with GlobalConte
       case true =>
         controller.deselectFrames()
         playingAnimation.write(false)
+    }
+    controller.model.scanimation /> {
+      case Missing() =>
+        playingScanimation.write(false)
     }
   }
 
@@ -246,7 +252,12 @@ object BuilderLogic extends PageLogic[BuilderPage] with Logging with GlobalConte
       framesClearOverlay.hidden()
     })
     framesShow.click(() => {
-      playingAnimation.write(!playingAnimation())
+      if (playingAnimation()) {
+        playingAnimation.write(false)
+        animationFrameId().foreach(id => controller.selectFrame(id))
+      } else {
+        playingAnimation.write(true)
+      }
     })
     playingAnimation /> {
       case false =>
@@ -346,8 +357,13 @@ object BuilderLogic extends PageLogic[BuilderPage] with Logging with GlobalConte
     scanimate.click(() => controller.scanimate())
     scanimationReset.click(() => controller.clearScanimation())
     scanimationPlay.click(() => {
-      playingScanimation.write(!playingScanimation())
-      if (playingScanimation()) scanimationStartFrame.write(controller.model.frame())
+      if (playingScanimation()) {
+        playingScanimation.write(false)
+        controller.model.frames.ids.headOption.foreach(id => controller.selectFrame(id))
+      } else {
+        scanimationStartFrame.write(controller.model.frame())
+        playingScanimation.write(true)
+      }
     })
     playingScanimation /> {
       case false =>
@@ -380,39 +396,45 @@ object BuilderLogic extends PageLogic[BuilderPage] with Logging with GlobalConte
 
     val root = preview.stage.sub
     val loadContainer = root.sub.scaleTo(0.001)
-    val frameSprite = new Sprite().anchorAtCenter.addTo(root)
-    val scanimationContainer = root.sub.visibleTo(false)
-    selectedFrame /> {
-      case Some(Frame(name, size, ImageContent(url, texture))) =>
-        frameSprite.textureTo(texture)
-      case None =>
-        frameSprite.clearTexture
+    val selectedSprite = new Sprite().anchorAtCenter.addTo(root)
+    (selectedFrame && previewSize) /> {
+      case (Some(Frame(name, frameSize, ImageContent(url, texture))), size) =>
+        val scale = (size / frameSize).min min 1
+        selectedSprite
+          .scaleTo(scale)
+          .positionAt(size / 2)
+          .textureTo(texture)
+          .visibleTo(true)
+      case _ =>
+        selectedSprite
+          .clearTexture
+          .visibleTo(false)
     }
-    controller.model.frames.data /> {
-      case Nil => frameSprite.clearTexture
-    }
+
+    val animationSprite = new Sprite().anchorAtCenter.addTo(root)
     (playingAnimation && controller.model.frame && previewSize) /> {
       case ((true, frameId), size) =>
         val frames = controller.model.frames.data()
-        val index = (frameId / frameDuration) % frames.size
-        val frame = frames(index.toInt)
+        val index = ((frameId / frameDuration) % frames.size).toInt
+        val frame = frames(index)
         val scale = (size / frame.size).min min 1
-        frameSprite
+        animationFrameId.write(controller.model.frames.ids.lift(index))
+        animationSprite
           .scaleTo(scale)
           .positionAt(size / 2)
           .textureTo(frame.content.texture)
+          .visibleTo(true)
       case _ =>
-        frameSprite.clearTexture
+        animationSprite.visibleTo(false)
     }
 
+    val scanimationContainer = root.sub.visibleTo(false)
     val scanimationSprite = new Sprite().anchorAtCenter.addTo(scanimationContainer)
     val gridSprite = new Sprite().anchorAtCenter.withBlendMode(BlendModes.MULTIPLY).addTo(scanimationContainer)
     controller.model.scanimation /> {
       case Loaded(start, end, scanimation) =>
         scanimationSprite.textureTo(scanimation.scanimation.texture)
         gridSprite.textureTo(scanimation.grid.texture)
-      case Missing() =>
-        playingScanimation.write(false)
     }
     (playingScanimation && controller.model.frame && scanimationStartFrame && previewSize) /> {
       case (((true, frameId), startFrame), size) =>
@@ -451,13 +473,6 @@ object BuilderLogic extends PageLogic[BuilderPage] with Logging with GlobalConte
         scanimationContainer.visibleTo(false)
     }
 
-    (previewSize && selectedFrame) /> {
-      case (size, Some(frame)) =>
-        val scale = (size / frame.size).min min 1
-        frameSprite.scaleTo(scale)
-        frameSprite.positionAt(size / 2)
-    }
-
     scanimationImage.click(() => {
       controller.model.scanimation().valueOpt.foreach(value => value.scanimation.url.download("scanimation.png"))
     })
@@ -466,6 +481,13 @@ object BuilderLogic extends PageLogic[BuilderPage] with Logging with GlobalConte
     })
 
     loadContainer
+  }
+
+  private lazy val helpWipOverlay = $("#help-wip-overlay")
+
+  /** Binds help buttons to their respective overlays */
+  def bindHelp(): Unit = {
+    $(".help").click(() => helpWipOverlay.visible())
   }
 
 }

@@ -123,6 +123,21 @@ object http extends Logging {
     }
   }
 
+  /** Returns the server url but with https */
+  def httpsString: String = {
+    val uri = URI.create(window.location.href)
+    uri.getPort match {
+      case -1 => s"https://${uri.getHost}"
+      case port => s"https://${uri.getHost}:$port"
+    }
+  }
+
+  /** Returns true if running locally */
+  def isLocalhost: Boolean = hostPortString.contains("127.0.0.1")
+
+  /** Returns true if protocol is secured */
+  def isHttps: Boolean = hostPortString.startsWith("https://")
+
   /** Returns the path part of the url */
   def pathString: String = history.location.pathname
 

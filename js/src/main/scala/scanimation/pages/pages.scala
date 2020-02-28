@@ -41,7 +41,7 @@ object pages extends GlobalContext with Logging {
 
   /** Loads LESS in local environment and CSS in production */
   def loadStyles(): Future[Unit] = {
-    if (hostPortString.contains("127.0.0.1")) {
+    if (isLocalhost) {
       $("head")
         .append($("""<link rel="stylesheet/less" type="text/css" href="/styles.less">"""))
         .append($("""<script src="https://cdnjs.cloudflare.com/ajax/libs/less.js/3.9.0/less.min.js"></script>"""))
