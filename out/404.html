@@ -76,23 +76,254 @@
     </div>
 </div>
 
-<div id="help-wip-overlay" class="overlay overlay-close">
+<div id="help-frames-overlay" class="overlay overlay-close help-overlay">
     <div>
         <div class="overlay-header">
-            <span class="overlay-title">Upcoming feature</span>
+            <span class="overlay-title">Help: Frames</span>
             <button class="overlay-close"><i class="material-icons">close</i></button>
         </div>
         <div class="overlay-content">
-            <p>
-                The help buttons, that show detailed explanation for every term in this app, is the next feature on the list.
-                It will include cool gifs and plenty of examples!
-            </p>
-            <p>
-                To keep in touch with the latest updates, join the <a href="https://discord.gg/xPzesRV" target="_blank">Scanimation community</a>.
-            </p>
+            <div class="help-v">
+                <p>
+                    To generate the scanimation, you need to import an animation.
+                    <b>Frames</b> refer to separate images, where each represents a single frame of the animation.
+                </p>
+                <p>Here are the recommendations for the animation:</p>
+                <p>1. Draw solid color silhouettes on white background</p>
+                <div class="help-h">
+                    <div class="help-image" style='background-image: url("/image/frames-1-b.png")'>
+                        <p><i class="bad material-icons">close</i></p>
+                    </div>
+                    <div class="help-image" style='background-image: url("/image/frames-1-g.png")'>
+                        <p><i class="good material-icons">done</i></p>
+                    </div>
+                </div>
+                <p>2. Avoid small detail</p>
+                <div class="help-h">
+                    <div class="help-image" style='background-image: url("/image/frames-2-b.png")'>
+                        <p><i class="bad material-icons">close</i></p>
+                    </div>
+                    <div class="help-image" style='background-image: url("/image/frames-2-g.png")'>
+                        <p><i class="good material-icons">done</i></p>
+                    </div>
+                </div>
+                <p>3. Use low number of frames: six or less</p>
+                <div class="help-h">
+                    <div class="help-image" style='background-image: url("/image/frames-3-b.gif")'>
+                        <p>Frame count: <span class="bad">12</span></p>
+                    </div>
+                    <div class="help-image" style='background-image: url("/image/frames-34-g.gif")'>
+                        <p>Frame count: <span class="good">6</span></p>
+                    </div>
+                </div>
+                <p>4. Draw a looped animation</p>
+                <div class="help-h">
+                    <div class="help-image" style='background-image: url("/image/frames-4-b.gif")'>
+                        <p><i class="bad material-icons">close</i></p>
+                    </div>
+                    <div class="help-image" style='background-image: url("/image/frames-34-g.gif")'>
+                        <p><i class="good material-icons">done</i></p>
+                    </div>
+                </div>
+            </div>
         </div>
-        <div class="overlay-controls">
-            <button class="overlay-close"><span>CLOSE</span></button>
+    </div>
+</div>
+
+<div id="help-image-size-overlay" class="overlay overlay-close help-overlay">
+    <div>
+        <div class="overlay-header">
+            <span class="overlay-title">Help: Image size</span>
+            <button class="overlay-close"><i class="material-icons">close</i></button>
+        </div>
+        <div class="overlay-content">
+            <div class="help-v">
+                <p>
+                    <b>Image size</b> is the pixel width and height of all of the frames.
+                    Frame images must match in <b>size</b>, otherwise the app won’t be able to generate the scanimation.
+                </p>
+                <p>
+                    It’s recommended to choose <b>image size</b> according to the further usage of the produced scanimation.
+                    For printed scanimations, the 300 dpi images are recommended, which results in the next <b>image sizes</b> for most popular formats:
+                </p>
+                <div class="help-h">
+                    <div class="help-image" style='background-image: url("/image/image-size-1.gif")'></div>
+                    <div class="help-v">
+                        <p class="description"><b>A4:</b> 3508 x 2480</p>
+                        <p class="description"><b>US letter:</b> 3300 x 2550</p>
+                        <p class="description"><span class="good">Compatible:</span> 3508 x 2550</p>
+                    </div>
+                </div>
+                <div class="help-h">
+                    <div class="help-image" style='background-image: url("/image/image-size-2.gif")'></div>
+                    <div class="help-v">
+                        <p class="description"><b>A5:</b> 2480 x 1748</p>
+                        <p class="description"><b>US half letter:</b> 2550 x 1650</p>
+                        <p class="description"><span class="good">Compatible:</span> 2550 x 1748</p>
+                    </div>
+                </div>
+                <p>
+                    The compatible sizes are useful, if you want to share your scanimations with the public,
+                    and you are not sure which paper <b>size</b> is used in their country.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="help-frame-count-overlay" class="overlay overlay-close help-overlay">
+    <div>
+        <div class="overlay-header">
+            <span class="overlay-title">Help: Frame count</span>
+            <button class="overlay-close"><i class="material-icons">close</i></button>
+        </div>
+        <div class="overlay-content">
+            <div class="help-v">
+                <p>
+                    <b>Frame count</b> is the number of frames put into final scanimation.
+                    It depends on the number of frames of underlying animation and number of overlapping frames (see: frame overlap).
+                </p>
+                <p>
+                    It is recommended to use a low number of frames: six or less.
+                </p>
+                <p>
+                    For each frame you add, the less information is visible through the grid.
+                    For example, with four frames, <span class="good">25%</span> of underlying animation is visible;
+                    while for eight frames, only <span class="bad">12.5%</span> of information is visible.
+                </p>
+                <p>
+                    So if you have less frames, you will get a better scanimation effect, but choppier animation.
+                    And if you have more frames, you will get a worse scanimation effect, but smoother animation.
+                    Four to six frames appears to be the best compromise.
+                </p>
+                <div class="help-h">
+                    <div class="help-image" style='background-image: url("/image/frame-count-1.png")'>
+                        <p>Frame count: 10</p>
+                        <p>Visible area: <span class="bad">10%</span></p>
+                    </div>
+                    <div class="help-image" style='background-image: url("/image/frame-count-2.png")'>
+                        <p>Frame count: 8</p>
+                        <p>Visible area: <span class="bad">12.5%</span></p>
+                    </div>
+                </div>
+                <div class="help-h">
+                    <div class="help-image" style='background-image: url("/image/frame-count-3.png")'>
+                        <p>Frame count: 6</p>
+                        <p>Visible area: <span class="good">16.6%</span></p>
+                    </div>
+                    <div class="help-image" style='background-image: url("/image/frame-count-4.png")'>
+                        <p>Frame count: 4</p>
+                        <p>Visible area: <span class="good">25%</span></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="help-direction-overlay" class="overlay overlay-close help-overlay">
+    <div>
+        <div class="overlay-header">
+            <span class="overlay-title">Help: Direction</span>
+            <button class="overlay-close"><i class="material-icons">close</i></button>
+        </div>
+        <div class="overlay-content">
+            <div class="help-v">
+                <p>
+                    <b>Direction</b> defines where you drag the grid over the scanimation.
+                </p>
+                <p>
+                    The left <b>direction</b> is recommended for scanimation cards and books, when the scanimation is placed on the right page. And vice versa: right <b>direction</b>, if placed on the left page.
+                </p>
+                <div class="help-h">
+                    <div class="help-image" style='background-image: url("/image/direction-left.gif")'>
+                        <p>Direction: Left</p>
+                    </div>
+                    <div class="help-image" style='background-image: url("/image/direction-right.gif")'>
+                        <p>Direction: Right</p>
+                    </div>
+                </div>
+                <div class="help-h">
+                    <div class="help-image" style='background-image: url("/image/direction-up.gif")'>
+                        <p>Direction: Up</p>
+                    </div>
+                    <div class="help-image" style='background-image: url("/image/direction-down.gif")'>
+                        <p>Direction: Down</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="help-frame-width-overlay" class="overlay overlay-close help-overlay">
+    <div>
+        <div class="overlay-header">
+            <span class="overlay-title">Help: Frame width</span>
+            <button class="overlay-close"><i class="material-icons">close</i></button>
+        </div>
+        <div class="overlay-content">
+            <div class="help-v">
+                <p>
+                    <b>Frame width</b> is the pixel width of each frame slice in the produced scanimation.
+                    It is the same as the size of grid gaps in pixels.
+                </p>
+                <p>
+                    Recommended <b>frame width</b> for A4 and US letter paper sizes is 9 px.
+                </p>
+                <div class="help-h">
+                    <div class="help-image" style='background-image: url("/image/frame-width-1.png")'>
+                        <p>Frame width: 1x</p>
+                    </div>
+                    <div class="help-image" style='background-image: url("/image/frame-width-2.png")'>
+                        <p>Frame width: 2x</p>
+                    </div>
+                </div>
+                <div class="help-h">
+                    <div class="help-image" style='background-image: url("/image/frame-width-3.png")'>
+                        <p>Frame width: 3x</p>
+                    </div>
+                    <div class="help-image" style='background-image: url("/image/frame-width-4.png")'>
+                        <p>Frame width: 4x</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="help-overlap-overlay" class="overlay overlay-close help-overlay">
+    <div>
+        <div class="overlay-header">
+            <span class="overlay-title">Help: Frame overlap</span>
+            <button class="overlay-close"><i class="material-icons">close</i></button>
+        </div>
+        <div class="overlay-content">
+            <div class="help-v">
+                <p>
+                    <b>Frame overlap</b> is the number of frames contained in a single scanimation frame.
+                    If your underlying animation spans the whole width or height of the sheet,
+                    then it is possible to stack two or more animations together.
+                </p>
+                <p>
+                    For example, if you have an 18-frame animation of horse galloping from left to right,
+                    you can stack three of them, producing a 6-frame animation of three horses galloping.
+                    In this case the <b>frame overlap</b> is set to three.
+                </p>
+                <div class="help-h">
+                    <div class="help-image" style='background-image: url("/image/overlap-1.gif")'>
+                        <p>Frame overlap: 1</p>
+                        <p>Frame count: <span class="bad">18</span></p>
+                    </div>
+                    <div class="help-image" style='background-image: url("/image/overlap-2.gif")'>
+                        <p>Frame overlap: 3</p>
+                        <p>Frame count: <span class="good">6</span></p>
+                    </div>
+                </div>
+                <p>
+                    This trick will allow you to produce very smooth scanimations while keeping the frame count low.
+                </p>
+            </div>
         </div>
     </div>
 </div>

@@ -483,11 +483,27 @@ object BuilderLogic extends PageLogic[BuilderPage] with Logging with GlobalConte
     loadContainer
   }
 
-  private lazy val helpWipOverlay = $("#help-wip-overlay")
+  private lazy val helpFramesOverlay = $("#help-frames-overlay")
+  private lazy val helpOverlapOverlay = $("#help-overlap-overlay")
+  private lazy val helpImageSizeOverlay = $("#help-image-size-overlay")
+  private lazy val helpFrameCountOverlay = $("#help-frame-count-overlay")
+  private lazy val helpDirectionOverlay = $("#help-direction-overlay")
+  private lazy val helpFrameWidthOverlay = $("#help-frame-width-overlay")
+  private lazy val helpFramesButton = $("#frames-help")
+  private lazy val helpOverlapButton = $("#settings-frame-overlap-help")
+  private lazy val helpImageSizeButton = $("#settings-image-size-help")
+  private lazy val helpFrameCountButton = $("#settings-frame-count-help")
+  private lazy val helpDirectionButton = $("#settings-direction-help")
+  private lazy val helpFrameWidthButton = $("#settings-frame-width-help")
 
   /** Binds help buttons to their respective overlays */
   def bindHelp(): Unit = {
-    $(".help").click(() => helpWipOverlay.visible())
+    helpOverlapButton.click(() => helpOverlapOverlay.visible())
+    helpFramesButton.click(() => helpFramesOverlay.visible())
+    helpImageSizeButton.click(() => helpImageSizeOverlay.visible())
+    helpFrameCountButton.click(() => helpFrameCountOverlay.visible())
+    helpDirectionButton.click(() => helpDirectionOverlay.visible())
+    helpFrameWidthButton.click(() => helpFrameWidthOverlay.visible())
   }
 
 }
